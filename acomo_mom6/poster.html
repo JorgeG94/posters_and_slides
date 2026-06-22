@@ -119,19 +119,22 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 .qr .who b{font-weight:600}
 
 /* author photo placeholders (title bar) */
-.authorpics{display:flex;gap:20px;justify-content:flex-end;margin-top:20px}
+.authorpics{display:flex;gap:24px;align-self:center}
 .apic{text-align:center}
-.apic .ph{width:92px;height:92px;border-radius:50%;border:2px dashed #c2a9df;
+.apic .ph{width:116px;height:116px;border-radius:50%;border:2px dashed #c2a9df;
   display:flex;align-items:center;justify-content:center;color:#c2a9df;
   font-family:var(--mono);font-size:26px;background:rgba(194,169,223,0.08)}
 .apic .nm{font-size:21px;color:#cdc2e2;margin-top:8px;font-family:var(--body)}
 
 /* institution logo placeholders (right column) */
 .logos{display:flex;gap:18px;align-items:stretch}
-.logobox{flex:1;height:120px;border:2px dashed var(--muted);border-radius:12px;
+.logobox{flex:1;height:200px;border:2px dashed var(--muted);border-radius:12px;
   display:flex;align-items:center;justify-content:center;text-align:center;
   color:var(--muted);font-family:var(--mono);font-size:24px;line-height:1.25;
   background:var(--paper)}
+.logobox img{max-width:90%;max-height:176px;object-fit:contain}
+.apic img{width:136px;height:136px;border-radius:50%;object-fit:cover;
+  border:2px solid #c2a9df;display:block}
 
 @media print{
   html,body{background:#fff}
@@ -156,16 +159,16 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
       <div class="affil"><sup>1</sup> NCI &nbsp;·&nbsp; <sup>2</sup> ACCESS-NRI
         &nbsp;·&nbsp; <sup>3</sup> NOAA-GFDL</div>
     </div>
+    <div class="authorpics">
+      <div class="apic"><img src="imgs/jorge.png" alt="Jorge"><div class="nm">Jorge</div></div>
+      <div class="apic"><img src="imgs/ed.png" alt="Edward"><div class="nm">Edward</div></div>
+      <div class="apic"><img src="imgs/utheri.jpg" alt="Utheri"><div class="nm">Utheri</div></div>
+      <div class="apic"><img src="imgs/marshall.png" alt="Marshall"><div class="nm">Marshall</div></div>
+    </div>
     <div class="right">
       <b>ACOMO</b><br>
       [session · date]<br>
       jorge.galvezvallejo@anu.edu.au
-      <div class="authorpics">
-        <div class="apic"><div class="ph">photo</div><div class="nm">Gálvez V.</div></div>
-        <div class="apic"><div class="ph">photo</div><div class="nm">Yang</div></div>
-        <div class="apic"><div class="ph">photo</div><div class="nm">Wagura</div></div>
-        <div class="apic"><div class="ph">photo</div><div class="nm">Ward</div></div>
-      </div>
     </div>
   </div>
 
@@ -175,7 +178,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     <!-- ---------- LEFT: THE PROMISE ---------- -->
     <div class="col promise">
       <div class="colhead">
-        <span class="tag">The dream</span>
+        <span class="tag">Objective</span>
         <span class="sub">why standard Fortran</span>
       </div>
 
@@ -194,17 +197,17 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         with OpenMP.</p>
       </div>
 
-      <div class="card">
-        <h3>Portable by construction</h3>
-        <p>One code path aims at NVIDIA, AMD and Intel GPUs while running on
-        CPU. Performance is a contract between the code and the compiler, just
-        as it was in the CPU era.</p>
-      </div>
 
       <div class="card">
         <h3>Bitwise reproducible</h3>
         <p>Goal: maintain the bitwise-reproducibility contract from MOM6 —
         identical bits across decompositions and devices.</p>
+      </div>
+
+      <div class="card">
+        <h3>OpenMP for data movement</h3>
+        <p>OpenMP directives are used to manage data movement between the host CPU and the device GPU, portable across compilers.
+        </p>
       </div>
 
       <!-- DATA-MOVEMENT FIGURE -->
@@ -242,11 +245,11 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
             <line x1="330" y1="292" x2="330" y2="338"/><line x1="362" y1="292" x2="362" y2="338"/><line x1="394" y1="292" x2="394" y2="338"/>
             <line x1="780" y1="292" x2="780" y2="338"/><line x1="812" y1="292" x2="812" y2="338"/><line x1="844" y1="292" x2="844" y2="338"/><line x1="876" y1="292" x2="876" y2="338"/><line x1="908" y1="292" x2="908" y2="338"/>
           </g>
-          <text x="92" y="324" font-family="Space Grotesk,sans-serif" font-weight="600" font-size="32" fill="#5f5e5a">PCIe ×16</text>
+          <text x="92" y="324" font-family="Space Grotesk,sans-serif" font-weight="600" font-size="32" fill="#5f5e5a">PCIe</text>
 
           <!-- transfer arrows across the bus -->
           <line x1="600" y1="248" x2="600" y2="402" stroke="#d85a30" stroke-width="5" marker-end="url(#ahm)"/>
-          <text x="588" y="276" text-anchor="end" font-family="Inter,sans-serif" font-size="24" fill="#993c1d">map(to)</text>
+          <text x="588" y="276" text-anchor="end" font-family="Inter,sans-serif" font-size="24" fill="#993c1d">map(to:)</text>
           <line x1="690" y1="402" x2="690" y2="248" stroke="#d85a30" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#ahm)"/>
           <text x="702" y="276" text-anchor="start" font-family="Inter,sans-serif" font-size="24" fill="#993c1d">update from</text>
 
@@ -284,9 +287,9 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
       </div>
 
       <div class="logos">
-        <div class="logobox">NCI<br>logo</div>
-        <div class="logobox">ACCESS-NRI<br>logo</div>
-        <div class="logobox">GFDL<br>logo</div>
+        <div class="logobox"><img src="imgs/nci.jpg" alt="NCI"></div>
+        <div class="logobox"><img src="imgs/access-nri.png" alt="ACCESS-NRI"></div>
+        <div class="logobox"><img src="imgs/noaa.png" alt="NOAA-GFDL"></div>
       </div>
     </div>
 
@@ -294,7 +297,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     <div class="col center">
       <div class="hero">
         <div class="lede">Thanks to the compiler!</div>
-        <h2>One loop construct,<br><span style="color:var(--accent)">CPU and GPU parallelism.</span></h2>
+        <h2>do concurrent for<br><span style="color:var(--accent)">CPU and GPU parallelism.</span></h2>
         <div class="subhead">CPUs and GPUs like different styles of parallelism.
           Blocking over the vertical layers appears to be the straight winning
           choice. One source, portable, readable and maintainable.</div>
@@ -434,16 +437,14 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           <!-- bars: lengths illustrative only -->
           <g font-family="Inter,sans-serif" font-size="27" fill="#3a3a36" text-anchor="end">
             <text x="408" y="152">CPU node</text>
-            <text x="408" y="196">Intel Max</text>
-            <text x="408" y="240">AMD MI250X</text>
-            <text x="408" y="284">NVIDIA V100</text>
-            <text x="408" y="328">NVIDIA H100</text>
+            <text x="408" y="196">AMD MI250X</text>
+            <text x="408" y="240">NVIDIA V100</text>
+            <text x="408" y="284">NVIDIA H100</text>
           </g>
           <rect x="430" y="130" width="1120" height="30" rx="4" fill="#888780"/>
-          <rect x="430" y="174" width="560"  height="30" rx="4" fill="#7e5aa6"/>
-          <rect x="430" y="218" width="500"  height="30" rx="4" fill="#7e5aa6"/>
-          <rect x="430" y="262" width="600"  height="30" rx="4" fill="#7e5aa6"/>
-          <rect x="430" y="306" width="340"  height="30" rx="4" fill="#503874"/>
+          <rect x="430" y="174" width="500"  height="30" rx="4" fill="#7e5aa6"/>
+          <rect x="430" y="218" width="600"  height="30" rx="4" fill="#7e5aa6"/>
+          <rect x="430" y="262" width="340"  height="30" rx="4" fill="#503874"/>
 
           <!-- lower-is-better arrow -->
           <line x1="1000" y1="352" x2="560" y2="352" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
@@ -457,8 +458,15 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     <!-- ---------- RIGHT: THE CATCH ---------- -->
     <div class="col catch">
       <div class="colhead">
-        <span class="tag">The catch</span>
-        <span class="sub">and how blocking absorbs it</span>
+        <span class="tag">Approach </span>
+        <span class="sub">GPU porting</span>
+      </div>
+
+      <div class="card lead">
+        <h3>CPUs and GPUs are not equal</h3>
+        <p>GPUs desire throughput; any serialization has to come after
+        distribution. CPUs handle divergent code paths and focus on
+        vectorization. Blocking over the vertical layers reveals a compromise.</p>
       </div>
 
       <!-- STACKED LOOP FIGURE (CPU over GPU) -->
@@ -540,15 +548,8 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           outer on CPU, inner on GPU.</div>
       </div>
 
-      <div class="card lead">
-        <h3>CPUs and GPUs are not equal</h3>
-        <p>GPUs desire throughput; any serialization has to come after
-        distribution. CPUs handle divergent code paths and focus on
-        vectorization. Blocking over the vertical layers reveals a compromise.</p>
-      </div>
-
       <div class="card">
-        <h3>Vertical serialization is still a killer</h3>
+        <h3>Column-wise serialization is still a killer</h3>
         <p>Blocking unifies the horizontal physics (most of it). Vertical
         recurrences (mixing, tridiagonal solves) keep <code>k</code> sequential
         inside on every device — same nest, block size just pinned.</p>
