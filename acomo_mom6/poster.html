@@ -1,0 +1,595 @@
+<meta charset="utf-8">
+<title>MOM6 on GPUs in standard Fortran — poster</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#1b1b18; --muted:#5f5e5a; --line:#d8d5cc;
+  --paper:#ffffff; --panel:#f2f0f6; --panel2:#e9e6f0;
+  --accent:#503874; --accent-mid:#7e5aa6; --accent-fill:#ece7f4;
+  --coral:#993c1d; --coral-mid:#d85a30; --coral-fill:#faece7;
+  --slate:#2e2046;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+
+  /* ===== SIZING — edit these two ===== */
+  /* On-screen preview zoom (static, NOT window-responsive). 1 = true design size.
+     Drop to ~0.30 on a laptop, raise toward 0.6 on a big monitor. */
+  --screen-zoom: 0.42;
+  /* The design canvas below is authored at A0 landscape; the print rule scales
+     it to physical paper. To change paper size, edit BOTH the print --paper-zoom
+     and @page size near the bottom of this <style>:
+        A2 landscape → paper-zoom 0.499  ·  @page size 594mm 420mm
+        A1 landscape → paper-zoom 0.706  ·  @page size 841mm 594mm
+        A0 landscape → paper-zoom 0.999  ·  @page size 1189mm 841mm   */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
+#stage{display:flex;justify-content:center;padding:0}
+
+.poster{
+  width:1189mm;height:841mm;background:var(--paper);
+  position:relative;overflow:hidden;
+  zoom:var(--screen-zoom);
+  display:flex;flex-direction:column;
+}
+
+/* ---------- title bar ---------- */
+.titlebar{
+  background:var(--slate);color:#fff;
+  padding:34px 56px 30px;display:flex;align-items:flex-end;
+  justify-content:space-between;gap:40px;
+}
+.eyebrow{font-family:var(--mono);font-size:30px;letter-spacing:.18em;
+  text-transform:uppercase;color:#c2a9df}
+.title{font-family:var(--disp);font-weight:700;font-size:64px;line-height:1.02;
+  margin-top:10px;max-width:2400px}
+.title .k{color:#c2a9df;font-family:var(--mono);font-weight:500}
+.authors{font-size:32px;font-weight:500;margin-top:18px}
+.affil{font-size:26px;color:#cdc2e2;margin-top:6px;max-width:2300px}
+.titlebar .right{text-align:right;font-size:26px;color:#cdc2e2;min-width:520px}
+.titlebar .right b{color:#fff;font-weight:600}
+
+/* ---------- body grid ---------- */
+.body{flex:1;display:grid;grid-template-columns:23.5% 1fr 23.5%;
+  gap:34px;padding:38px 48px}
+.col{display:flex;flex-direction:column;gap:26px}
+
+.colhead{display:flex;align-items:baseline;gap:18px;
+  border-bottom:5px solid var(--ink);padding-bottom:14px;margin-bottom:6px}
+.colhead .tag{font-family:var(--mono);font-size:38px;letter-spacing:.12em;
+  text-transform:uppercase}
+.colhead .sub{font-size:31px;color:var(--muted)}
+.promise .colhead{border-color:var(--accent-mid)}
+.promise .colhead .tag{color:var(--accent)}
+.catch .colhead{border-color:var(--coral-mid)}
+.catch .colhead .tag{color:var(--coral)}
+
+.card{background:var(--panel);border-radius:16px;padding:30px 34px;
+  border:1px solid var(--line)}
+.card.lead{border-left:12px solid var(--accent-mid);border-radius:0 16px 16px 0}
+.catch .card.lead{border-left-color:var(--coral-mid)}
+.card h3{font-family:var(--disp);font-weight:600;font-size:42px;line-height:1.12;
+  margin-bottom:12px}
+.card p{font-size:33px;line-height:1.42;color:#3a3a36}
+.card code{font-family:var(--mono);font-size:30px;background:#fff;
+  padding:1px 7px;border-radius:6px;border:1px solid var(--line)}
+
+/* ---------- center ---------- */
+.hero{padding:6px 6px 0}
+.hero .lede{font-family:var(--mono);font-size:30px;letter-spacing:.06em;
+  color:var(--accent);text-transform:uppercase}
+.hero h2{font-family:var(--disp);font-weight:700;font-size:118px;
+  line-height:.98;letter-spacing:-.01em;margin:14px 0 0}
+.hero h2 .b{color:var(--coral-mid)}
+.hero .subhead{font-size:38px;line-height:1.34;color:#33332f;margin-top:24px;
+  max-width:1850px}
+.hero .subhead code{font-family:var(--mono);font-size:34px;color:var(--accent)}
+
+.figwrap{background:var(--paper);border:1px solid var(--line);border-radius:18px;
+  padding:26px 28px 18px;margin-top:30px}
+.figwrap .cap{font-size:25px;color:var(--muted);margin-top:12px;text-align:center}
+.figwrap .cap b{color:var(--ink);font-weight:600}
+
+.results{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px}
+.rcard{background:var(--paper);border:1px solid var(--line);border-radius:16px;
+  padding:28px 30px 22px;position:relative}
+.rcard h4{font-family:var(--disp);font-weight:600;font-size:36px;margin-bottom:8px}
+.rcard .cap{font-size:28px;color:var(--muted);margin-top:12px;line-height:1.3}
+.prelim{position:absolute;top:20px;right:20px;font-family:var(--mono);
+  font-size:24px;letter-spacing:.08em;color:var(--coral);
+  background:var(--coral-fill);border:1px solid #f0c4b3;
+  padding:4px 10px;border-radius:20px}
+
+/* ---------- bottom ---------- */
+.bottombar{background:var(--panel2);border-top:1px solid var(--line);
+  padding:26px 56px;display:flex;align-items:center;gap:46px}
+.bottombar .meth{flex:1}
+.bottombar .meth .lab{font-family:var(--mono);font-size:23px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted)}
+.bottombar .meth p{font-size:27px;margin-top:6px;color:#33332f}
+.bottombar .meth p code{font-family:var(--mono);font-size:24px}
+.note{font-size:25px;color:var(--coral);max-width:620px;line-height:1.36}
+.qr{display:flex;align-items:center;gap:20px}
+.qrbox{width:150px;height:150px;border:3px dashed var(--muted);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-family:var(--mono);font-size:20px;color:var(--muted);line-height:1.2}
+.qr .who{font-size:25px;color:#33332f}
+.qr .who b{font-weight:600}
+
+/* author photo placeholders (title bar) */
+.authorpics{display:flex;gap:20px;justify-content:flex-end;margin-top:20px}
+.apic{text-align:center}
+.apic .ph{width:92px;height:92px;border-radius:50%;border:2px dashed #c2a9df;
+  display:flex;align-items:center;justify-content:center;color:#c2a9df;
+  font-family:var(--mono);font-size:26px;background:rgba(194,169,223,0.08)}
+.apic .nm{font-size:21px;color:#cdc2e2;margin-top:8px;font-family:var(--body)}
+
+/* institution logo placeholders (right column) */
+.logos{display:flex;gap:18px;align-items:stretch}
+.logobox{flex:1;height:120px;border:2px dashed var(--muted);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  color:var(--muted);font-family:var(--mono);font-size:24px;line-height:1.25;
+  background:var(--paper)}
+
+@media print{
+  html,body{background:#fff}
+  /* A0 landscape — true design size, no scaling */
+  .poster{zoom:0.999;box-shadow:none}
+  @page{size:1189mm 841mm;margin:0}   /* A0 landscape */
+}
+</style>
+
+<div id="stage">
+<div class="poster" id="poster">
+
+  <!-- ===================== TITLE BAR ===================== -->
+  <div class="titlebar">
+    <div>
+      <div class="eyebrow">Porting MOM6 to GPUs</div>
+      <div class="title">GPU acceleration of MOM6 using a
+        <span class="k">directive-driven</span> approach</div>
+      <!-- EDIT authors/affiliations + superscripts here -->
+      <div class="authors">Jorge Luis Gálvez Vallejo<sup>1</sup> ·
+        Edward Yang<sup>2</sup> · Utheri Wagura<sup>3</sup> · Marshall Ward<sup>3</sup></div>
+      <div class="affil"><sup>1</sup> NCI &nbsp;·&nbsp; <sup>2</sup> ACCESS-NRI
+        &nbsp;·&nbsp; <sup>3</sup> NOAA-GFDL</div>
+    </div>
+    <div class="right">
+      <b>ACOMO</b><br>
+      [session · date]<br>
+      jorge.galvezvallejo@anu.edu.au
+      <div class="authorpics">
+        <div class="apic"><div class="ph">photo</div><div class="nm">Gálvez V.</div></div>
+        <div class="apic"><div class="ph">photo</div><div class="nm">Yang</div></div>
+        <div class="apic"><div class="ph">photo</div><div class="nm">Wagura</div></div>
+        <div class="apic"><div class="ph">photo</div><div class="nm">Ward</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BODY ===================== -->
+  <div class="body">
+
+    <!-- ---------- LEFT: THE PROMISE ---------- -->
+    <div class="col promise">
+      <div class="colhead">
+        <span class="tag">The dream</span>
+        <span class="sub">why standard Fortran</span>
+      </div>
+
+      <div class="card lead">
+        <h3>One source code for CPU and GPU</h3>
+        <p>Keep a single source of truth that works for both CPUs and multiple
+        GPU vendors. The ocean physics stays in Fortran for the community; the
+        GPU parallelism is offloaded to the compiler.</p>
+      </div>
+
+      <div class="card">
+        <h3><code>do concurrent</code> to express parallelism</h3>
+        <p>A standard-language construct, not a vendor pragma.
+        <code>do concurrent</code> maps the same loop to multicore CPU or to the
+        GPU — no directives, no kernels, no rewrite. Data movement is handled
+        with OpenMP.</p>
+      </div>
+
+      <div class="card">
+        <h3>Portable by construction</h3>
+        <p>One code path aims at NVIDIA, AMD and Intel GPUs while running on
+        CPU. Performance is a contract between the code and the compiler, just
+        as it was in the CPU era.</p>
+      </div>
+
+      <div class="card">
+        <h3>Bitwise reproducible</h3>
+        <p>Goal: maintain the bitwise-reproducibility contract from MOM6 —
+        identical bits across decompositions and devices.</p>
+      </div>
+
+      <!-- DATA-MOVEMENT FIGURE -->
+      <div class="figwrap">
+        <svg viewBox="0 0 1000 786" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="Host CPU and device GPU connected by PCIe, with the array A mapped onto device memory by an OpenMP target directive">
+          <defs>
+            <marker id="ahm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <!-- ===== HOST ===== -->
+          <g stroke="#b4b2a9" stroke-width="2">
+            <line x1="46" y1="92"  x2="60" y2="92"/><line x1="46" y1="132" x2="60" y2="132"/>
+            <line x1="46" y1="172" x2="60" y2="172"/><line x1="46" y1="212" x2="60" y2="212"/>
+          </g>
+          <rect x="60" y="64" width="400" height="180" rx="16" fill="#f2f0f6" stroke="#b4b2a9" stroke-width="1.5"/>
+          <text x="96" y="138" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="54" fill="#2e2046">CPU</text>
+          <text x="98" y="182" font-family="Inter,sans-serif" font-size="27" fill="#5f5e5a">host</text>
+          <g fill="#888780"><rect x="300" y="90" width="48" height="48" rx="6"/><rect x="360" y="90" width="48" height="48" rx="6"/><rect x="300" y="148" width="48" height="48" rx="6"/><rect x="360" y="148" width="48" height="48" rx="6"/></g>
+          <text x="358" y="228" text-anchor="middle" font-family="Inter,sans-serif" font-size="23" fill="#5f5e5a">a few fat cores</text>
+
+          <text x="632" y="50" text-anchor="middle" font-family="Inter,sans-serif" font-size="27" fill="#503874">array A · host</text>
+          <g fill="#ece7f4" stroke="#7e5aa6" stroke-width="1.2">
+            <rect x="508" y="64"  width="56" height="38" rx="4"/><rect x="572" y="64"  width="56" height="38" rx="4"/><rect x="636" y="64"  width="56" height="38" rx="4"/><rect x="700" y="64"  width="56" height="38" rx="4"/>
+            <rect x="508" y="110" width="56" height="38" rx="4"/><rect x="572" y="110" width="56" height="38" rx="4"/><rect x="636" y="110" width="56" height="38" rx="4"/><rect x="700" y="110" width="56" height="38" rx="4"/>
+            <rect x="508" y="156" width="56" height="38" rx="4"/><rect x="572" y="156" width="56" height="38" rx="4"/><rect x="636" y="156" width="56" height="38" rx="4"/><rect x="700" y="156" width="56" height="38" rx="4"/>
+            <rect x="508" y="202" width="56" height="38" rx="4"/><rect x="572" y="202" width="56" height="38" rx="4"/><rect x="636" y="202" width="56" height="38" rx="4"/><rect x="700" y="202" width="56" height="38" rx="4"/>
+          </g>
+
+          <!-- ===== PCIe BUS ===== -->
+          <rect x="60" y="286" width="888" height="58" rx="10" fill="#e9e6f0" stroke="#d8d5cc"/>
+          <g stroke="#d8d5cc" stroke-width="1">
+            <line x1="330" y1="292" x2="330" y2="338"/><line x1="362" y1="292" x2="362" y2="338"/><line x1="394" y1="292" x2="394" y2="338"/>
+            <line x1="780" y1="292" x2="780" y2="338"/><line x1="812" y1="292" x2="812" y2="338"/><line x1="844" y1="292" x2="844" y2="338"/><line x1="876" y1="292" x2="876" y2="338"/><line x1="908" y1="292" x2="908" y2="338"/>
+          </g>
+          <text x="92" y="324" font-family="Space Grotesk,sans-serif" font-weight="600" font-size="32" fill="#5f5e5a">PCIe ×16</text>
+
+          <!-- transfer arrows across the bus -->
+          <line x1="600" y1="248" x2="600" y2="402" stroke="#d85a30" stroke-width="5" marker-end="url(#ahm)"/>
+          <text x="588" y="276" text-anchor="end" font-family="Inter,sans-serif" font-size="24" fill="#993c1d">map(to)</text>
+          <line x1="690" y1="402" x2="690" y2="248" stroke="#d85a30" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#ahm)"/>
+          <text x="702" y="276" text-anchor="start" font-family="Inter,sans-serif" font-size="24" fill="#993c1d">update from</text>
+
+          <!-- ===== DEVICE (GPU) ===== -->
+          <rect x="60" y="388" width="400" height="224" rx="16" fill="#ece7f4" stroke="#7e5aa6" stroke-width="1.5"/>
+          <text x="96" y="466" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="54" fill="#503874">GPU</text>
+          <text x="98" y="508" font-family="Inter,sans-serif" font-size="27" fill="#503874">device</text>
+          <g fill="#7e5aa6" opacity="0.55">
+            <rect x="92" y="540" width="18" height="18" rx="3"/><rect x="116" y="540" width="18" height="18" rx="3"/><rect x="140" y="540" width="18" height="18" rx="3"/><rect x="164" y="540" width="18" height="18" rx="3"/><rect x="188" y="540" width="18" height="18" rx="3"/><rect x="212" y="540" width="18" height="18" rx="3"/><rect x="236" y="540" width="18" height="18" rx="3"/><rect x="260" y="540" width="18" height="18" rx="3"/><rect x="284" y="540" width="18" height="18" rx="3"/>
+            <rect x="92" y="564" width="18" height="18" rx="3"/><rect x="116" y="564" width="18" height="18" rx="3"/><rect x="140" y="564" width="18" height="18" rx="3"/><rect x="164" y="564" width="18" height="18" rx="3"/><rect x="188" y="564" width="18" height="18" rx="3"/><rect x="212" y="564" width="18" height="18" rx="3"/><rect x="236" y="564" width="18" height="18" rx="3"/><rect x="260" y="564" width="18" height="18" rx="3"/><rect x="284" y="564" width="18" height="18" rx="3"/>
+            <rect x="92" y="588" width="18" height="18" rx="3"/><rect x="116" y="588" width="18" height="18" rx="3"/><rect x="140" y="588" width="18" height="18" rx="3"/><rect x="164" y="588" width="18" height="18" rx="3"/><rect x="188" y="588" width="18" height="18" rx="3"/><rect x="212" y="588" width="18" height="18" rx="3"/><rect x="236" y="588" width="18" height="18" rx="3"/><rect x="260" y="588" width="18" height="18" rx="3"/><rect x="284" y="588" width="18" height="18" rx="3"/>
+          </g>
+          <text x="316" y="560" font-family="Inter,sans-serif" font-size="23" fill="#503874">thousands of</text>
+          <text x="316" y="588" font-family="Inter,sans-serif" font-size="23" fill="#503874">small cores</text>
+
+          <!-- device array: allocated (dashed), top row already copied in -->
+          <g fill="#ece7f4" stroke="#7e5aa6" stroke-width="1.2">
+            <rect x="508" y="408" width="56" height="38" rx="4"/><rect x="572" y="408" width="56" height="38" rx="4"/><rect x="636" y="408" width="56" height="38" rx="4"/><rect x="700" y="408" width="56" height="38" rx="4"/>
+          </g>
+          <g fill="none" stroke="#7e5aa6" stroke-width="1.4" stroke-dasharray="5 4">
+            <rect x="508" y="454" width="56" height="38" rx="4"/><rect x="572" y="454" width="56" height="38" rx="4"/><rect x="636" y="454" width="56" height="38" rx="4"/><rect x="700" y="454" width="56" height="38" rx="4"/>
+            <rect x="508" y="500" width="56" height="38" rx="4"/><rect x="572" y="500" width="56" height="38" rx="4"/><rect x="636" y="500" width="56" height="38" rx="4"/><rect x="700" y="500" width="56" height="38" rx="4"/>
+            <rect x="508" y="546" width="56" height="38" rx="4"/><rect x="572" y="546" width="56" height="38" rx="4"/><rect x="636" y="546" width="56" height="38" rx="4"/><rect x="700" y="546" width="56" height="38" rx="4"/>
+          </g>
+          <text x="632" y="612" text-anchor="middle" font-family="Inter,sans-serif" font-size="24" fill="#503874">array A · device (map alloc)</text>
+
+          <!-- ===== DIRECTIVE ===== -->
+          <rect x="60" y="650" width="888" height="108" rx="12" fill="#f2f0f6" stroke="#e0dceb"/>
+          <text x="92" y="700" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">!$omp target enter data <tspan fill="#503874">map(alloc: A)</tspan></text>
+          <text x="92" y="740" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">!$omp target update <tspan fill="#503874">to(A)</tspan><tspan fill="#9c9a92">   ! copy in</tspan></text>
+        </svg>
+        <div class="cap">Compute runs in <b>do concurrent</b>; OpenMP
+          <b>target … map</b> keeps <b>A</b> resident on the GPU, so PCIe isn’t
+          crossed every step.</div>
+      </div>
+
+      <div class="logos">
+        <div class="logobox">NCI<br>logo</div>
+        <div class="logobox">ACCESS-NRI<br>logo</div>
+        <div class="logobox">GFDL<br>logo</div>
+      </div>
+    </div>
+
+    <!-- ---------- CENTER ---------- -->
+    <div class="col center">
+      <div class="hero">
+        <div class="lede">Thanks to the compiler!</div>
+        <h2>One loop construct,<br><span style="color:var(--accent)">CPU and GPU parallelism.</span></h2>
+        <div class="subhead">CPUs and GPUs like different styles of parallelism.
+          Blocking over the vertical layers appears to be the straight winning
+          choice. One source, portable, readable and maintainable.</div>
+      </div>
+
+      <!-- BLOCKING FIGURE -->
+      <div class="figwrap">
+        <svg viewBox="0 0 1640 470" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="k-blocking the column into independent do concurrent regions, with bk as the tuning knob">
+          <defs>
+            <marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <text x="40" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="40" fill="#2e2046">k-blocking: one do concurrent per block — bk picks the device</text>
+
+          <!-- pseudocode -->
+          <rect x="40" y="86" width="560" height="330" rx="14" fill="#f2f0f6" stroke="#e0dceb"/>
+          <text x="66" y="140" font-family="IBM Plex Mono,monospace" font-size="29" fill="#1b1b18">do nblock = 1, nblocks</text>
+          <text x="66" y="182" font-family="IBM Plex Mono,monospace" font-size="29" fill="#1b1b18">&#160;&#160;k0 = (nblock-1)*bk + 1</text>
+          <text x="66" y="224" font-family="IBM Plex Mono,monospace" font-size="29" fill="#1b1b18">&#160;&#160;ke = min(nblock*bk, nz)</text>
+          <text x="66" y="266" font-family="IBM Plex Mono,monospace" font-size="29" fill="#503874">&#160;&#160;do concurrent &amp;</text>
+          <text x="66" y="306" font-family="IBM Plex Mono,monospace" font-size="29" fill="#503874">&#160;&#160;&#160;&#160;(kk=k0:ke, j=1:nj, i=1:ni)</text>
+          <text x="66" y="348" font-family="IBM Plex Mono,monospace" font-size="29" fill="#1b1b18">&#160;&#160;&#160;&#160;A(i,j,kk) = hor_visc(…)</text>
+          <text x="66" y="396" font-family="Inter,sans-serif" font-size="25" fill="#503874">ni · nj · bk independent iters → one launch / block</text>
+
+          <!-- tiled k-bar -->
+          <text x="660" y="118" font-family="Inter,sans-serif" font-size="24" fill="#5f5e5a">do nblock — blocks independent, stepped to bound the launch</text>
+          <g font-family="Inter,sans-serif" font-size="22" fill="#3a3a36" text-anchor="middle">
+            <text x="735" y="150">block 1</text><text x="915" y="150">block 2</text>
+            <text x="1095" y="150">block 3</text><text x="1275" y="150">block 4</text>
+          </g>
+          <rect x="650" y="162" width="170" height="48" rx="6" fill="#f1efe8" stroke="#b4b2a9"/>
+          <rect x="830" y="162" width="170" height="48" rx="6" fill="#ece7f4" stroke="#7e5aa6"/>
+          <rect x="1010" y="162" width="170" height="48" rx="6" fill="#f1efe8" stroke="#b4b2a9"/>
+          <rect x="1190" y="162" width="170" height="48" rx="6" fill="#f1efe8" stroke="#b4b2a9"/>
+          <text x="624" y="192" text-anchor="end" font-family="Inter,sans-serif" font-size="22" fill="#9c9a92">k=1</text>
+          <text x="1372" y="192" text-anchor="start" font-family="Inter,sans-serif" font-size="22" fill="#9c9a92">nz</text>
+
+          <!-- explode block 2 into an i×j plane (with depth = bk levels) -->
+          <line x1="915" y1="210" x2="838" y2="262" stroke="#9c9a92" stroke-width="2" stroke-dasharray="5 4"/>
+          <rect x="876" y="250" width="190" height="86" rx="6" fill="none" stroke="#b79fd6"/>
+          <rect x="858" y="268" width="190" height="86" rx="6" fill="none" stroke="#b79fd6"/>
+          <rect x="840" y="286" width="190" height="86" rx="6" fill="#ece7f4" stroke="#7e5aa6"/>
+          <g stroke="#ffffff" stroke-width="2">
+            <line x1="878" y1="286" x2="878" y2="372"/><line x1="916" y1="286" x2="916" y2="372"/>
+            <line x1="954" y1="286" x2="954" y2="372"/><line x1="992" y1="286" x2="992" y2="372"/>
+            <line x1="840" y1="315" x2="1030" y2="315"/><line x1="840" y1="343" x2="1030" y2="343"/>
+          </g>
+          <line x1="840" y1="386" x2="1030" y2="386" stroke="#503874" stroke-width="3" marker-end="url(#ah2)"/>
+          <text x="935" y="412" text-anchor="middle" font-family="Inter,sans-serif" font-size="23" fill="#503874">i — unit stride</text>
+          <line x1="826" y1="286" x2="826" y2="372" stroke="#503874" stroke-width="3" marker-end="url(#ah2)"/>
+          <text x="814" y="334" text-anchor="end" font-family="Inter,sans-serif" font-size="23" fill="#503874">j</text>
+          <line x1="840" y1="286" x2="876" y2="250" stroke="#503874" stroke-width="3" marker-end="url(#ah2)"/>
+          <text x="922" y="244" text-anchor="middle" font-family="Inter,sans-serif" font-size="23" fill="#503874">kk = k0:ke</text>
+
+          <!-- caption right of plane -->
+          <text x="1100" y="288" font-family="Space Grotesk,sans-serif" font-weight="600" font-size="28" fill="#2e2046">one block → one</text>
+          <text x="1100" y="322" font-family="IBM Plex Mono,monospace" font-size="26" fill="#503874">do concurrent</text>
+          <text x="1100" y="360" font-family="Inter,sans-serif" font-size="23" fill="#3a3a36">(kk, j, i) all parallel</text>
+
+          <!-- bk knob -->
+          <rect x="650" y="246" width="155" height="40" rx="20" fill="#faece7" stroke="#f0c4b3"/>
+          <text x="727" y="272" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="22" fill="#993c1d">bk = nz → GPU</text>
+          <rect x="650" y="296" width="155" height="40" rx="20" fill="#ece7f4" stroke="#c9b8e0"/>
+          <text x="727" y="322" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="22" fill="#503874">bk = 1 → CPU</text>
+        </svg>
+        <div class="cap">Tile the column into <b>nblocks</b>; each block is a single
+          <b>do concurrent</b> over its levels and the full <b>i×j</b> plane. Block
+          size <b>bk</b> is the per-device knob — large for GPU, small for CPU.</div>
+      </div>
+
+      <!-- RESULTS STRIP (placeholders) -->
+      <div class="results">
+
+        <div class="rcard">
+          <span class="prelim">preliminary</span>
+          <h4>Per-kernel speedup</h4>
+          <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="per kernel speedup placeholder">
+            <line x1="150" y1="20" x2="150" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+            <line x1="150" y1="262" x2="505" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+            <line x1="186" y1="20" x2="186" y2="262" stroke="#d85a30" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="186" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="17" fill="#993c1d">1× (CPU)</text>
+            <g font-family="Inter,sans-serif" font-size="18" fill="#3a3a36" text-anchor="end">
+              <text x="144" y="50">cont. corr</text><text x="144" y="92">cont. eqn</text>
+              <text x="144" y="134">vert. visc</text><text x="144" y="176">hor. visc</text>
+              <text x="144" y="218">Coriolis+adv</text>
+            </g>
+            <g fill="#7e5aa6">
+              <rect x="150" y="36" width="320" height="26" rx="3"/><rect x="150" y="78" width="316" height="26" rx="3"/>
+              <rect x="150" y="120" width="190" height="26" rx="3"/><rect x="150" y="162" width="142" height="26" rx="3"/>
+              <rect x="150" y="204" width="142" height="26" rx="3"/>
+            </g>
+            <text x="505" y="18" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="16" fill="#9c9a92">speedup →</text>
+          </svg>
+          <div class="cap">1 GPU vs 1 CPU node. <i>Bars illustrative — replace with measured.</i></div>
+        </div>
+
+        <div class="rcard">
+          <span class="prelim">placeholder</span>
+          <h4>Roofline</h4>
+          <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="roofline placeholder">
+            <line x1="60" y1="40" x2="60" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+            <line x1="60" y1="262" x2="500" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+            <path d="M60 232 L250 70" stroke="#7e5aa6" stroke-width="3" fill="none"/>
+            <line x1="250" y1="70" x2="500" y2="70" stroke="#7e5aa6" stroke-width="3"/>
+            <circle cx="150" cy="151" r="9" fill="#d85a30"/>
+            <text x="166" y="146" font-family="Inter,sans-serif" font-size="18" fill="#993c1d">column kernel</text>
+            <text x="150" y="252" text-anchor="middle" font-family="Inter,sans-serif" font-size="16" fill="#9c9a92">memory-bound</text>
+            <text x="40" y="150" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92" transform="rotate(-90 40 150)">GFLOP/s</text>
+            <text x="280" y="288" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92">arithmetic intensity</text>
+          </svg>
+          <div class="cap">Bandwidth roof = STREAM/HBM. <i>Sketch — drop in measured points.</i></div>
+        </div>
+      </div>
+
+      <!-- VENDOR COMPARISON FIGURE (long, lower-is-better) -->
+      <div class="figwrap">
+        <svg viewBox="0 0 1640 360" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="GPU vendor comparison placeholder: wall-clock time to solution, lower is better, NVIDIA AMD Intel">
+          <defs>
+            <marker id="ahlb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <text x="40" y="56" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="42" fill="#2e2046">Across vendors — NVIDIA · AMD · Intel</text>
+          <text x="40" y="96" font-family="Inter,sans-serif" font-size="28" fill="#5f5e5a">wall-clock time to solution · lower is better</text>
+
+          <rect x="1360" y="28" width="252" height="46" rx="23" fill="#faece7" stroke="#f0c4b3"/>
+          <text x="1486" y="59" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="26" fill="#993c1d">placeholder</text>
+
+          <!-- baseline axis -->
+          <line x1="430" y1="120" x2="430" y2="330" stroke="#b4b2a9" stroke-width="2"/>
+
+          <!-- bars: lengths illustrative only -->
+          <g font-family="Inter,sans-serif" font-size="27" fill="#3a3a36" text-anchor="end">
+            <text x="408" y="152">CPU node</text>
+            <text x="408" y="196">Intel Max</text>
+            <text x="408" y="240">AMD MI250X</text>
+            <text x="408" y="284">NVIDIA V100</text>
+            <text x="408" y="328">NVIDIA H100</text>
+          </g>
+          <rect x="430" y="130" width="1120" height="30" rx="4" fill="#888780"/>
+          <rect x="430" y="174" width="560"  height="30" rx="4" fill="#7e5aa6"/>
+          <rect x="430" y="218" width="500"  height="30" rx="4" fill="#7e5aa6"/>
+          <rect x="430" y="262" width="600"  height="30" rx="4" fill="#7e5aa6"/>
+          <rect x="430" y="306" width="340"  height="30" rx="4" fill="#503874"/>
+
+          <!-- lower-is-better arrow -->
+          <line x1="1000" y1="352" x2="560" y2="352" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
+          <text x="1020" y="360" font-family="Inter,sans-serif" font-size="26" fill="#2e2046">lower = faster</text>
+        </svg>
+        <div class="cap">Same problem, one source, four devices. <i>Bars illustrative —
+          replace with measured wall-clock times.</i></div>
+      </div>
+    </div>
+
+    <!-- ---------- RIGHT: THE CATCH ---------- -->
+    <div class="col catch">
+      <div class="colhead">
+        <span class="tag">The catch</span>
+        <span class="sub">and how blocking absorbs it</span>
+      </div>
+
+      <!-- STACKED LOOP FIGURE (CPU over GPU) -->
+      <div class="figwrap">
+        <svg viewBox="0 0 1000 880" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="CPU kji versus GPU jik loop ordering, stacked vertically">
+          <defs>
+            <marker id="ahv" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <!-- ===== CPU PANEL (top) ===== -->
+          <rect x="8" y="8" width="984" height="420" rx="16" fill="#ffffff" stroke="#d8d5cc"/>
+          <text x="40" y="74" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="46" fill="#2e2046">CPU — kji</text>
+          <text x="40" y="116" font-family="Inter,sans-serif" font-size="28" fill="#5f5e5a">k outer · (j,i) concurrent inner</text>
+
+          <rect x="40" y="146" width="470" height="180" rx="12" fill="#f2f0f6" stroke="#e0dceb"/>
+          <text x="66" y="202" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">do k = 1, nz</text>
+          <text x="66" y="246" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">&#160;&#160;do concurrent (j,i)</text>
+          <text x="66" y="290" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">&#160;&#160;&#160;&#160;A(i,j,k) = …</text>
+          <text x="40" y="372" font-family="Inter,sans-serif" font-size="27" fill="#503874">▸ (j,i) parallel · i unit-stride</text>
+          <text x="40" y="406" font-family="Inter,sans-serif" font-size="27" fill="#993c1d">▸ k sequential (outer)</text>
+
+          <!-- stacked i×j planes -->
+          <rect x="690" y="270" width="230" height="84" rx="8" fill="#f1efe8" stroke="#b4b2a9"/>
+          <rect x="660" y="238" width="230" height="84" rx="8" fill="#f1efe8" stroke="#b4b2a9"/>
+          <rect x="630" y="206" width="230" height="84" rx="8" fill="#ece7f4" stroke="#7e5aa6"/>
+          <g stroke="#ffffff" stroke-width="2">
+            <line x1="668" y1="206" x2="668" y2="290"/><line x1="706" y1="206" x2="706" y2="290"/>
+            <line x1="744" y1="206" x2="744" y2="290"/><line x1="782" y1="206" x2="782" y2="290"/>
+            <line x1="820" y1="206" x2="820" y2="290"/>
+            <line x1="630" y1="234" x2="860" y2="234"/><line x1="630" y1="262" x2="860" y2="262"/>
+          </g>
+          <rect x="640" y="212" width="34" height="28" rx="6" fill="#503874"/>
+          <text x="657" y="233" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#fff">i</text>
+          <text x="614" y="252" text-anchor="end" font-family="Inter,sans-serif" font-size="26" fill="#503874">j</text>
+          <rect x="868" y="196" width="34" height="28" rx="6" fill="#d85a30"/>
+          <text x="885" y="217" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#fff">k</text>
+          <line x1="884" y1="228" x2="930" y2="280" stroke="#d85a30" stroke-width="4" marker-end="url(#ahv)"/>
+          <text x="745" y="390" text-anchor="middle" font-family="Inter,sans-serif" font-size="25" fill="#5f5e5a">one i×j level, then descend k</text>
+
+          <!-- ===== GPU PANEL (bottom) ===== -->
+          <rect x="8" y="450" width="984" height="420" rx="16" fill="#ffffff" stroke="#d8d5cc"/>
+          <text x="40" y="516" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="46" fill="#2e2046">GPU — jik</text>
+          <text x="40" y="558" font-family="Inter,sans-serif" font-size="28" fill="#5f5e5a">(j,i) concurrent outer · k inner</text>
+
+          <rect x="40" y="588" width="470" height="180" rx="12" fill="#f2f0f6" stroke="#e0dceb"/>
+          <text x="66" y="644" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">do concurrent (j,i)</text>
+          <text x="66" y="688" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">&#160;&#160;do k = 1, nz</text>
+          <text x="66" y="732" font-family="IBM Plex Mono,monospace" font-size="30" fill="#1b1b18">&#160;&#160;&#160;&#160;A(i,j,k) = …</text>
+          <text x="40" y="814" font-family="Inter,sans-serif" font-size="27" fill="#503874">▸ (j,i) → ni·nj threads</text>
+          <text x="40" y="848" font-family="Inter,sans-serif" font-size="27" fill="#993c1d">▸ k sequential (per thread)</text>
+
+          <!-- single i×j plane -->
+          <path d="M610 626 V614 H860 V626" fill="none" stroke="#503874" stroke-width="3"/>
+          <text x="735" y="600" text-anchor="middle" font-family="Inter,sans-serif" font-size="24" fill="#503874">warp: i coalesced</text>
+          <rect x="610" y="636" width="250" height="150" rx="8" fill="#ece7f4" stroke="#7e5aa6"/>
+          <g stroke="#ffffff" stroke-width="2">
+            <line x1="660" y1="636" x2="660" y2="786"/><line x1="710" y1="636" x2="710" y2="786"/>
+            <line x1="760" y1="636" x2="760" y2="786"/><line x1="810" y1="636" x2="810" y2="786"/>
+            <line x1="610" y1="674" x2="860" y2="674"/><line x1="610" y1="711" x2="860" y2="711"/>
+            <line x1="610" y1="748" x2="860" y2="748"/>
+          </g>
+          <rect x="620" y="644" width="34" height="28" rx="6" fill="#503874"/>
+          <text x="637" y="665" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#fff">i</text>
+          <text x="600" y="716" text-anchor="end" font-family="Inter,sans-serif" font-size="26" fill="#503874">j</text>
+          <line x1="860" y1="656" x2="878" y2="656" stroke="#9c9a92" stroke-width="2" stroke-dasharray="5 4"/>
+          <g fill="#f1efe8" stroke="#b4b2a9">
+            <rect x="878" y="636" width="40" height="36" rx="6"/><rect x="878" y="674" width="40" height="36" rx="6"/>
+            <rect x="878" y="712" width="40" height="36" rx="6"/><rect x="878" y="750" width="40" height="36" rx="6"/>
+          </g>
+          <rect x="924" y="602" width="34" height="28" rx="6" fill="#d85a30"/>
+          <text x="941" y="623" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" fill="#fff">k</text>
+          <line x1="941" y1="638" x2="941" y2="784" stroke="#d85a30" stroke-width="4" marker-end="url(#ahv)"/>
+          <text x="735" y="830" text-anchor="middle" font-family="Inter,sans-serif" font-size="25" fill="#5f5e5a">each column = one thread, walking k</text>
+        </svg>
+        <div class="cap">Same array <b>A(i,j,k)</b>; only the <b>k</b>-loop moves —
+          outer on CPU, inner on GPU.</div>
+      </div>
+
+      <div class="card lead">
+        <h3>CPUs and GPUs are not equal</h3>
+        <p>GPUs desire throughput; any serialization has to come after
+        distribution. CPUs handle divergent code paths and focus on
+        vectorization. Blocking over the vertical layers reveals a compromise.</p>
+      </div>
+
+      <div class="card">
+        <h3>Vertical serialization is still a killer</h3>
+        <p>Blocking unifies the horizontal physics (most of it). Vertical
+        recurrences (mixing, tridiagonal solves) keep <code>k</code> sequential
+        inside on every device — same nest, block size just pinned.</p>
+      </div>
+
+      <div class="card">
+        <h3><code>block_size</code> is the only knob to turn</h3>
+        <p><code>bk=nz</code> → one big launch (GPU); <code>bk=1</code> →
+        level-by-level (CPU); in between trades launches against footprint.</p>
+      </div>
+
+      <div class="card">
+        <h3>Performance is memory-bound</h3>
+        <p>V100 is 900 GB/s while a full Saphire Rapids is ~600 GB/s. Maximum speedup for a memory-bound workload is limited by the memory bandwidth. Max speedup on Gadi is ~6x per node. </p>
+      </div>
+
+      <div class="card">
+        <h3>The cost of reproducibility</h3>
+        <p>GPU atomics and reductions reorder floating-point ops. Staying
+        bit-for-bit means refusing the fast nondeterministic path and
+        enforcing fixed-order arithmetic on the device.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BOTTOM BAR ===================== -->
+  <div class="bottombar">
+    <div class="meth">
+      <div class="lab">Methods &amp; systems</div>
+      <p>MOM6 · <code>nvfortran -stdpar -O3</code> · NCI Gadi (Xeon Sapphire
+      Rapids, V100, H100) · single source, CPU + GPU.</p>
+    </div>
+    <div class="note">Figures are illustrative placeholders. Measured speedups,
+      roofline and scaling presented live at the session.</div>
+    <div class="qr">
+      <div class="qrbox">QR →<br>paper / repo</div>
+      <div class="who"><b>Jorge Luis Gálvez Vallejo</b><br>NCI · ACCESS-NRI<br>
+        <span style="color:#5f5e5a">jorge.galvezvallejo@anu.edu.au</span></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
