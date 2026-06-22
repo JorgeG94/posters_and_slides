@@ -298,9 +298,6 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
       <div class="hero">
         <div class="lede">Thanks to the compiler!</div>
         <h2>do concurrent for<br><span style="color:var(--accent)">CPU and GPU parallelism.</span></h2>
-        <div class="subhead">CPUs and GPUs like different styles of parallelism.
-          Blocking over the vertical layers appears to be the straight winning
-          choice. One source, portable, readable and maintainable.</div>
       </div>
 
       <!-- BLOCKING FIGURE -->
@@ -415,42 +412,41 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         </div>
       </div>
 
-      <!-- VENDOR COMPARISON FIGURE (long, lower-is-better) -->
+      <!-- VENDOR COMPARISON FIGURE (lower-is-better) -->
       <div class="figwrap">
-        <svg viewBox="0 0 1640 360" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
-          aria-label="GPU vendor comparison placeholder: wall-clock time to solution, lower is better, NVIDIA AMD Intel">
+        <svg viewBox="0 0 1400 290" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="GPU vendor comparison placeholder: wall-clock time to solution, lower is better, NVIDIA AMD">
           <defs>
             <marker id="ahlb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </marker>
           </defs>
 
-          <text x="40" y="56" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="42" fill="#2e2046">Across vendors — NVIDIA · AMD · Intel</text>
-          <text x="40" y="96" font-family="Inter,sans-serif" font-size="28" fill="#5f5e5a">wall-clock time to solution · lower is better</text>
+          <!-- title + subtitle -->
+          <text x="20" y="42" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="38" fill="#2e2046">Across vendors — NVIDIA · AMD</text>
+          <text x="20" y="76" font-family="Inter,sans-serif" font-size="26" fill="#5f5e5a">wall-clock time to solution · lower is better</text>
 
-          <rect x="1360" y="28" width="252" height="46" rx="23" fill="#faece7" stroke="#f0c4b3"/>
-          <text x="1486" y="59" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="26" fill="#993c1d">placeholder</text>
+          <rect x="1080" y="18" width="300" height="44" rx="22" fill="#faece7" stroke="#f0c4b3"/>
+          <text x="1230" y="46" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="26" fill="#993c1d">placeholder</text>
 
           <!-- baseline axis -->
-          <line x1="430" y1="120" x2="430" y2="330" stroke="#b4b2a9" stroke-width="2"/>
+          <line x1="420" y1="100" x2="420" y2="260" stroke="#b4b2a9" stroke-width="2"/>
 
-          <!-- bars: lengths illustrative only -->
+          <!-- bars + labels -->
           <g font-family="Inter,sans-serif" font-size="27" fill="#3a3a36" text-anchor="end">
-            <text x="408" y="152">CPU node</text>
-            <text x="408" y="196">AMD MI250X</text>
-            <text x="408" y="240">NVIDIA V100</text>
-            <text x="408" y="284">NVIDIA H100</text>
+            <text x="404" y="136">AMD MI250X</text>
+            <text x="404" y="184">NVIDIA V100</text>
+            <text x="404" y="232">NVIDIA H100</text>
           </g>
-          <rect x="430" y="130" width="1120" height="30" rx="4" fill="#888780"/>
-          <rect x="430" y="174" width="500"  height="30" rx="4" fill="#7e5aa6"/>
-          <rect x="430" y="218" width="600"  height="30" rx="4" fill="#7e5aa6"/>
-          <rect x="430" y="262" width="340"  height="30" rx="4" fill="#503874"/>
+          <rect x="420" y="114" width="600" height="38" rx="5" fill="#7e5aa6"/>
+          <rect x="420" y="162" width="720" height="38" rx="5" fill="#7e5aa6"/>
+          <rect x="420" y="210" width="400" height="38" rx="5" fill="#503874"/>
 
           <!-- lower-is-better arrow -->
-          <line x1="1000" y1="352" x2="560" y2="352" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
-          <text x="1020" y="360" font-family="Inter,sans-serif" font-size="26" fill="#2e2046">lower = faster</text>
+          <line x1="1060" y1="274" x2="580" y2="274" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
+          <text x="1076" y="282" font-family="Inter,sans-serif" font-size="26" fill="#2e2046">lower = faster</text>
         </svg>
-        <div class="cap">Same problem, one source, four devices. <i>Bars illustrative —
+        <div class="cap">Same problem, one source, three devices. <i>Bars illustrative —
           replace with measured wall-clock times.</i></div>
       </div>
     </div>
@@ -560,12 +556,12 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <p><code>bk=nz</code> → one big launch (GPU); <code>bk=1</code> →
         level-by-level (CPU); in between trades launches against footprint.</p>
       </div>
-
+<!---
       <div class="card">
         <h3>Performance is memory-bound</h3>
         <p>V100 is 900 GB/s while a full Saphire Rapids is ~600 GB/s. Maximum speedup for a memory-bound workload is limited by the memory bandwidth. Max speedup on Gadi is ~6x per node. </p>
       </div>
-
+    -->
       <div class="card">
         <h3>The cost of reproducibility</h3>
         <p>GPU atomics and reductions reorder floating-point ops. Staying
