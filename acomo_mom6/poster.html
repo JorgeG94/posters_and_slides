@@ -17,19 +17,19 @@
   /* On-screen preview zoom (static, NOT window-responsive). 1 = true design size.
      Drop to ~0.30 on a laptop, raise toward 0.6 on a big monitor. */
   --screen-zoom: 0.42;
-  /* The design canvas below is authored at A0 landscape; the print rule scales
-     it to physical paper. To change paper size, edit BOTH the print --paper-zoom
+  /* The design canvas below is authored at A0 PORTRAIT; the print rule scales
+     it to physical paper. To change paper size, edit BOTH the print zoom
      and @page size near the bottom of this <style>:
-        A2 landscape → paper-zoom 0.499  ·  @page size 594mm 420mm
-        A1 landscape → paper-zoom 0.706  ·  @page size 841mm 594mm
-        A0 landscape → paper-zoom 0.999  ·  @page size 1189mm 841mm   */
+        A2 portrait → zoom 0.499  ·  @page size 420mm 594mm
+        A1 portrait → zoom 0.706  ·  @page size 594mm 841mm
+        A0 portrait → zoom 0.999  ·  @page size 841mm 1189mm   */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
-#stage{display:flex;justify-content:center;padding:0}
+#stage{display:flex;justify-content:center;padding:0;min-width:max-content}
 
 .poster{
-  width:1189mm;height:841mm;background:var(--paper);
+  width:841mm;height:1189mm;background:var(--paper);
   position:relative;overflow:hidden;
   zoom:var(--screen-zoom);
   display:flex;flex-direction:column;
@@ -43,7 +43,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 }
 .eyebrow{font-family:var(--mono);font-size:30px;letter-spacing:.18em;
   text-transform:uppercase;color:#c2a9df}
-.title{font-family:var(--disp);font-weight:700;font-size:64px;line-height:1.02;
+.title{font-family:var(--disp);font-weight:700;font-size:82px;line-height:1.02;
   margin-top:10px;max-width:2400px}
 .title .k{color:#c2a9df;font-family:var(--mono);font-weight:500}
 .authors{font-size:32px;font-weight:500;margin-top:18px}
@@ -51,12 +51,18 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 .titlebar .right{text-align:right;font-size:26px;color:#cdc2e2;min-width:520px}
 .titlebar .right b{color:#fff;font-weight:600}
 
-/* ---------- body grid ---------- */
-.body{flex:1;display:grid;grid-template-columns:23.5% 1fr 23.5%;
+/* ---------- body grid (PORTRAIT: three stacked horizontal bands) ---------- */
+.body{flex:1;display:grid;grid-template-rows:auto 1fr auto;
   gap:34px;padding:38px 48px}
-.col{display:flex;flex-direction:column;gap:26px}
+/* each band flows left-to-right; the colhead spans the full band width */
+.col{display:flex;flex-flow:row wrap;align-content:flex-start;gap:26px 30px}
+.col.center{display:flex;flex-direction:column;gap:26px;justify-content:flex-start}
 
-.colhead{display:flex;align-items:baseline;gap:18px;
+/* 2x2 (or N-wide) grid of cards that sits inside a band */
+.cardgrid{flex:1 1 1500px;display:grid;
+  grid-template-columns:1fr 1fr;gap:26px;align-content:start}
+
+.colhead{flex-basis:100%;display:flex;align-items:baseline;gap:18px;
   border-bottom:5px solid var(--ink);padding-bottom:14px;margin-bottom:6px}
 .colhead .tag{font-family:var(--mono);font-size:38px;letter-spacing:.12em;
   text-transform:uppercase}
@@ -66,9 +72,34 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 .catch .colhead{border-color:var(--coral-mid)}
 .catch .colhead .tag{color:var(--coral)}
 
+/* figures sitting beside a card-grid inside a horizontal band */
+.col.promise .figwrap{flex:0 1 860px;max-width:860px;margin-top:0;
+  align-self:flex-start}
+.col.catch .figwrap{flex:0 1 1000px;max-width:1000px;margin-top:0;
+  align-self:flex-start}
+/* blocking figure: cap to its native width, centred in the big middle band */
+.col.center>.figwrap{width:100%;max-width:1680px;margin-left:auto;margin-right:auto}
+/* center band: paired rows (blocking+speedup / roofline+vendor) */
+.centerrow{display:flex;gap:30px;align-items:stretch;margin-top:26px}
+.centerrow .figwrap{flex:2 1 0;margin-top:0}
+.centerrow .rcard{flex:1 1 0;margin-top:0;display:flex;flex-direction:column}
+.centerrow .rcard svg{flex:1;min-height:0;width:100%;display:block}
+/* vertically center cards within the taller figure in each band */
+.col.promise .cardgrid,.col.catch .cardgrid{align-self:center}
+.centerrow .hero{flex:2 1 0;margin-top:0}
+/* equal-width pairing: both boxes the same size.
+   Use grid, not stretched flex: grid fixes each column's width BEFORE measuring
+   content height, so the %-width svg computes its real height and the figwrap
+   encloses the whole graph. (In a flex row with flex-basis:0 the box collapses.) */
+.centerrow.equal{display:grid;grid-template-columns:1fr 1fr;
+  gap:30px;align-items:stretch}
+.centerrow.equal .figwrap svg{width:100%;height:auto;display:block}
+
 .card{background:var(--panel);border-radius:16px;padding:30px 34px;
   border:1px solid var(--line)}
-.card.lead{border-left:12px solid var(--accent-mid);border-radius:0 16px 16px 0}
+.card.conclusions{background:#d4c8e8;
+  border-left:10px solid var(--accent);border-right:10px solid var(--accent);
+  border-radius:16px}
 .catch .card.lead{border-left-color:var(--coral-mid)}
 .card h3{font-family:var(--disp);font-weight:600;font-size:42px;line-height:1.12;
   margin-bottom:12px}
@@ -105,6 +136,8 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 /* ---------- bottom ---------- */
 .bottombar{background:var(--panel2);border-top:1px solid var(--line);
   padding:26px 56px;display:flex;align-items:center;gap:46px}
+.bottombar .logos{flex:1}
+.bottombar .logobox{height:160px}
 .bottombar .meth{flex:1}
 .bottombar .meth .lab{font-family:var(--mono);font-size:23px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted)}
@@ -138,9 +171,9 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 
 @media print{
   html,body{background:#fff}
-  /* A0 landscape — true design size, no scaling */
+  /* A0 portrait — true design size, no scaling */
   .poster{zoom:0.999;box-shadow:none}
-  @page{size:1189mm 841mm;margin:0}   /* A0 landscape */
+  @page{size:841mm 1189mm;margin:0}   /* A0 portrait */
 }
 </style>
 
@@ -150,7 +183,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
   <!-- ===================== TITLE BAR ===================== -->
   <div class="titlebar">
     <div>
-      <div class="eyebrow">Porting MOM6 to GPUs</div>
+      <div class="eyebrow" style="display:none">Porting MOM6 to GPUs</div>
       <div class="title">GPU acceleration of MOM6 using a
         <span class="k">directive-driven</span> approach</div>
       <!-- EDIT authors/affiliations + superscripts here -->
@@ -182,32 +215,33 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <span class="sub">why standard Fortran</span>
       </div>
 
-      <div class="card lead">
-        <h3>One source code for CPU and GPU</h3>
-        <p>Keep a single source of truth that works for both CPUs and multiple
-        GPU vendors. The ocean physics stays in Fortran for the community; the
-        GPU parallelism is offloaded to the compiler.</p>
-      </div>
+      <div class="cardgrid">
+        <div class="card lead">
+          <h3>One source code for CPU and GPU</h3>
+          <p>Keep a single source of truth that works for both CPUs and multiple
+          GPU vendors. The ocean physics stays in Fortran for the community; the
+          GPU parallelism is offloaded to the compiler.</p>
+        </div>
 
-      <div class="card">
-        <h3><code>do concurrent</code> to express parallelism</h3>
-        <p>A standard-language construct, not a vendor pragma.
-        <code>do concurrent</code> maps the same loop to multicore CPU or to the
-        GPU — no directives, no kernels, no rewrite. Data movement is handled
-        with OpenMP.</p>
-      </div>
+        <div class="card">
+          <h3><code>do concurrent</code> to express parallelism</h3>
+          <p>A standard-language construct, not a vendor pragma.
+          <code>do concurrent</code> maps the same loop to multicore CPU or to the
+          GPU — no directives, no kernels, no rewrite. Data movement is handled
+          with OpenMP.</p>
+        </div>
 
+        <div class="card">
+          <h3>Bitwise reproducible</h3>
+          <p>Goal: maintain the bitwise-reproducibility contract from MOM6 —
+          identical bits across decompositions and devices.</p>
+        </div>
 
-      <div class="card">
-        <h3>Bitwise reproducible</h3>
-        <p>Goal: maintain the bitwise-reproducibility contract from MOM6 —
-        identical bits across decompositions and devices.</p>
-      </div>
-
-      <div class="card">
-        <h3>OpenMP for data movement</h3>
-        <p>OpenMP directives are used to manage data movement between the host CPU and the device GPU, portable across compilers.
-        </p>
+        <div class="card">
+          <h3>OpenMP for data movement</h3>
+          <p>OpenMP directives are used to manage data movement between the host CPU and the device GPU, portable across compilers.
+          </p>
+        </div>
       </div>
 
       <!-- DATA-MOVEMENT FIGURE -->
@@ -285,21 +319,76 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           <b>target … map</b> keeps <b>A</b> resident on the GPU, so PCIe isn’t
           crossed every step.</div>
       </div>
-
-      <div class="logos">
-        <div class="logobox"><img src="imgs/nci.jpg" alt="NCI"></div>
-        <div class="logobox"><img src="imgs/access-nri.png" alt="ACCESS-NRI"></div>
-        <div class="logobox"><img src="imgs/noaa.png" alt="NOAA-GFDL"></div>
-      </div>
     </div>
 
     <!-- ---------- CENTER ---------- -->
     <div class="col center">
+      <div class="centerrow">
       <div class="hero">
         <div class="lede">Thanks to the compiler!</div>
         <h2>do concurrent for<br><span style="color:var(--accent)">CPU and GPU parallelism.</span></h2>
       </div>
+      <div class="rcard">
+        <span class="prelim">preliminary</span>
+        <h4>Roofline</h4>
+        <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="double-precision roofline on H200: continuity solvers sit in the memory-bound region, far below the DRAM roof that breaks at 5.16 FLOP/byte">
+          <defs>
+            <marker id="rfh" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- log gridlines (x decades: 0.1 1 10 100 1000 ; y decades: 1 10 100) -->
+          <g stroke="#ececec" stroke-width="1">
+            <line x1="177.5" y1="40" x2="177.5" y2="250"/>
+            <line x1="285"   y1="40" x2="285"   y2="250"/>
+            <line x1="392.5" y1="40" x2="392.5" y2="250"/>
+            <line x1="70" y1="180" x2="500" y2="180"/>
+            <line x1="70" y1="110" x2="500" y2="110"/>
+            <line x1="70" y1="40"  x2="500" y2="40"/>
+          </g>
+          <!-- axes -->
+          <line x1="70" y1="40" x2="70" y2="250" stroke="#b4b2a9" stroke-width="1.5"/>
+          <line x1="70" y1="250" x2="500" y2="250" stroke="#b4b2a9" stroke-width="1.5"/>
+          <!-- x tick labels (FLOP/byte) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92" text-anchor="middle">
+            <text x="70" y="268">0.1</text><text x="177.5" y="268">1</text>
+            <text x="285" y="268">10</text><text x="392.5" y="268">100</text>
+            <text x="500" y="268">1000</text>
+          </g>
+          <!-- y tick labels (TFLOP/s) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92" text-anchor="end">
+            <text x="62" y="255">0.1</text><text x="62" y="185">1</text>
+            <text x="62" y="115">10</text><text x="62" y="45">100</text>
+          </g>
+          <!-- ridge guide: DRAM roof breaks at 5.16 FLOP/byte -->
+          <line x1="254" y1="77" x2="254" y2="250" stroke="#e0dceb" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <!-- DRAM roofline (slope-1 BW roof -> flat FP64 peak) -->
+          <polyline points="70,196 254,77 500,77" fill="none" stroke="#7e5aa6" stroke-width="3"/>
+          <text x="300" y="68" font-family="Inter,sans-serif" font-size="15" fill="#503874">FP64 peak — H200</text>
+          <text x="95" y="150" font-family="Inter,sans-serif" font-size="15" fill="#503874" transform="rotate(-33 95 150)">DRAM roof</text>
+          <text x="258" y="98" font-family="IBM Plex Mono,monospace" font-size="14" fill="#503874">breaks @ 5.16</text>
+          <!-- achieved kernels: 3 continuity solvers, AI ~0.4/0.6/0.7, ~0.4 -->
+          <g fill="#d85a30">
+            <circle cx="135" cy="210" r="6"/><circle cx="154" cy="205" r="6"/>
+            <circle cx="161" cy="210" r="6"/>
+          </g>
+          <text x="100" y="232" font-family="Inter,sans-serif" font-size="15" fill="#993c1d">continuity solvers</text>
+          <!-- headroom gap to the roof (about the same for all three) -->
+          <line x1="150" y1="205" x2="150" y2="146" stroke="#2e2046" stroke-width="2" marker-start="url(#rfh)" marker-end="url(#rfh)"/>
+          <text x="156" y="178" font-family="Inter,sans-serif" font-size="14" fill="#2e2046">≈ same headroom</text>
+          <!-- honest callout -->
+          <rect x="300" y="175" width="198" height="54" rx="14" fill="#faece7" stroke="#d85a30" stroke-width="1.5"/>
+          <text x="399" y="199" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" font-weight="600" fill="#993c1d">in the memory-bound region,</text>
+          <text x="399" y="219" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" font-weight="600" fill="#993c1d">but far from the roof</text>
+          <!-- axis titles -->
+          <text x="26" y="145" text-anchor="middle" font-family="Inter,sans-serif" font-size="15" fill="#5f5e5a" transform="rotate(-90 26 145)">Performance [TFLOP/s]</text>
+          <text x="285" y="290" text-anchor="middle" font-family="Inter,sans-serif" font-size="15" fill="#5f5e5a">Arithmetic intensity [FLOP/byte]</text>
+        </svg>
+      </div>
+      </div>
 
+      <div class="centerrow">
       <!-- BLOCKING FIGURE -->
       <div class="figwrap">
         <svg viewBox="0 0 1640 470" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
@@ -368,54 +457,49 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           size <b>bk</b> is the per-device knob — large for GPU, small for CPU.</div>
       </div>
 
-      <!-- RESULTS STRIP (placeholders) -->
-      <div class="results">
-
-        <div class="rcard">
-          <span class="prelim">preliminary</span>
-          <h4>Per-kernel speedup</h4>
-          <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="per kernel speedup placeholder">
-            <line x1="150" y1="20" x2="150" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
-            <line x1="150" y1="262" x2="505" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
-            <line x1="186" y1="20" x2="186" y2="262" stroke="#d85a30" stroke-width="1.5" stroke-dasharray="4 4"/>
-            <text x="186" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="17" fill="#993c1d">1× (CPU)</text>
-            <g font-family="Inter,sans-serif" font-size="18" fill="#3a3a36" text-anchor="end">
-              <text x="144" y="50">cont. corr</text><text x="144" y="92">cont. eqn</text>
-              <text x="144" y="134">vert. visc</text><text x="144" y="176">hor. visc</text>
-              <text x="144" y="218">Coriolis+adv</text>
-            </g>
-            <g fill="#7e5aa6">
-              <rect x="150" y="36" width="320" height="26" rx="3"/><rect x="150" y="78" width="316" height="26" rx="3"/>
-              <rect x="150" y="120" width="190" height="26" rx="3"/><rect x="150" y="162" width="142" height="26" rx="3"/>
-              <rect x="150" y="204" width="142" height="26" rx="3"/>
-            </g>
-            <text x="505" y="18" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="16" fill="#9c9a92">speedup →</text>
-          </svg>
-          <div class="cap">1 GPU vs 1 CPU node. <i>Bars illustrative — replace with measured.</i></div>
-        </div>
-
-        <div class="rcard">
-          <span class="prelim">placeholder</span>
-          <h4>Roofline</h4>
-          <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="roofline placeholder">
-            <line x1="60" y1="40" x2="60" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
-            <line x1="60" y1="262" x2="500" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
-            <path d="M60 232 L250 70" stroke="#7e5aa6" stroke-width="3" fill="none"/>
-            <line x1="250" y1="70" x2="500" y2="70" stroke="#7e5aa6" stroke-width="3"/>
-            <circle cx="150" cy="151" r="9" fill="#d85a30"/>
-            <text x="166" y="146" font-family="Inter,sans-serif" font-size="18" fill="#993c1d">column kernel</text>
-            <text x="150" y="252" text-anchor="middle" font-family="Inter,sans-serif" font-size="16" fill="#9c9a92">memory-bound</text>
-            <text x="40" y="150" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92" transform="rotate(-90 40 150)">GFLOP/s</text>
-            <text x="280" y="288" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" fill="#9c9a92">arithmetic intensity</text>
-          </svg>
-          <div class="cap">Bandwidth roof = STREAM/HBM. <i>Sketch — drop in measured points.</i></div>
-        </div>
+      <div class="rcard">
+        <span class="prelim">measured</span>
+        <h4>Per-kernel speedup</h4>
+        <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="per-kernel GPU speedup, H200 versus 52-core Sapphire Rapids">
+          <!-- axes -->
+          <line x1="150" y1="20" x2="150" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+          <line x1="150" y1="262" x2="505" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
+          <!-- 1x reference (parity with CPU) -->
+          <line x1="221" y1="20" x2="221" y2="262" stroke="#d85a30" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <text x="221" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="17" fill="#993c1d">1× (CPU)</text>
+          <!-- kernel labels -->
+          <g font-family="Inter,sans-serif" font-size="18" fill="#3a3a36" text-anchor="end">
+            <text x="144" y="50">barotropic</text><text x="144" y="92">vert. visc</text>
+            <text x="144" y="134">continuity</text><text x="144" y="176">Coriolis</text>
+            <text x="144" y="218">hor. visc</text>
+          </g>
+          <!-- bars: faster than CPU = purple, slower = coral -->
+          <rect x="150" y="37" width="307" height="26" rx="3" fill="#503874"/>
+          <rect x="150" y="79" width="195" height="26" rx="3" fill="#7e5aa6"/>
+          <rect x="150" y="121" width="136" height="26" rx="3" fill="#7e5aa6"/>
+          <rect x="150" y="163" width="11"  height="26" rx="3" fill="#d85a30"/>
+          <rect x="150" y="205" width="7"   height="26" rx="3" fill="#d85a30"/>
+          <!-- value labels -->
+          <g font-family="IBM Plex Mono,monospace" font-size="17">
+            <text x="463" y="56" fill="#503874">4.3×</text>
+            <text x="351" y="98" fill="#503874">2.8×</text>
+            <text x="292" y="140" fill="#503874">1.9×</text>
+            <text x="167" y="182" fill="#993c1d">0.15×</text>
+            <text x="163" y="224" fill="#993c1d">0.10×</text>
+          </g>
+          <text x="505" y="18" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="16" fill="#9c9a92">speedup →</text>
+        </svg>
+        <div class="cap">1 H200 GPU vs 52-core Sapphire Rapids node ·
+          <b>300×300×100</b> domain. Bars past <b>1×</b> = GPU faster;
+          <b>hor. visc</b> &amp; <b>Coriolis</b> regress.</div>
+      </div>
       </div>
 
+      <div class="centerrow equal">
       <!-- VENDOR COMPARISON FIGURE (lower-is-better) -->
       <div class="figwrap">
-        <svg viewBox="0 0 1400 290" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
-          aria-label="GPU vendor comparison placeholder: wall-clock time to solution, lower is better, NVIDIA AMD">
+        <svg viewBox="0 0 1400 480" width="100%" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="cross-vendor double-gyre miniapp, total time to solution, lower is better: V100, Intel PVC, AMD MI250X">
           <defs>
             <marker id="ahlb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -423,31 +507,93 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           </defs>
 
           <!-- title + subtitle -->
-          <text x="20" y="42" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="38" fill="#2e2046">Across vendors — NVIDIA · AMD</text>
-          <text x="20" y="76" font-family="Inter,sans-serif" font-size="26" fill="#5f5e5a">wall-clock time to solution · lower is better</text>
+          <text x="20" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="38" fill="#2e2046">Across vendors — NVIDIA · Intel · AMD</text>
+          <text x="20" y="96" font-family="Inter,sans-serif" font-size="26" fill="#5f5e5a">double-gyre miniapp · total time to solution · lower is better</text>
+          <text x="20" y="132" font-family="IBM Plex Mono,monospace" font-size="22" fill="#9c9a92">miniapp · Monash Hackathon, March 2026</text>
 
-          <rect x="1080" y="18" width="300" height="44" rx="22" fill="#faece7" stroke="#f0c4b3"/>
-          <text x="1230" y="46" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="26" fill="#993c1d">placeholder</text>
+          <rect x="1058" y="24" width="322" height="48" rx="24" fill="#ece7f4" stroke="#c9b8e0"/>
+          <text x="1219" y="56" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="24" fill="#503874">one source · 3 GPUs</text>
 
           <!-- baseline axis -->
-          <line x1="420" y1="100" x2="420" y2="260" stroke="#b4b2a9" stroke-width="2"/>
+          <line x1="420" y1="150" x2="420" y2="410" stroke="#b4b2a9" stroke-width="2"/>
 
-          <!-- bars + labels -->
-          <g font-family="Inter,sans-serif" font-size="27" fill="#3a3a36" text-anchor="end">
-            <text x="404" y="136">AMD MI250X</text>
-            <text x="404" y="184">NVIDIA V100</text>
-            <text x="404" y="232">NVIDIA H100</text>
+          <!-- labels -->
+          <g font-family="Inter,sans-serif" font-size="28" fill="#3a3a36" text-anchor="end">
+            <text x="404" y="207">NVIDIA V100</text>
+            <text x="404" y="297">Intel PVC</text>
+            <text x="404" y="387">AMD MI250X</text>
           </g>
-          <rect x="420" y="114" width="600" height="38" rx="5" fill="#7e5aa6"/>
-          <rect x="420" y="162" width="720" height="38" rx="5" fill="#7e5aa6"/>
-          <rect x="420" y="210" width="400" height="38" rx="5" fill="#503874"/>
+          <!-- bars (fastest = dark) -->
+          <rect x="420" y="170" width="762" height="56" rx="6" fill="#7e5aa6"/>
+          <rect x="420" y="260" width="768" height="56" rx="6" fill="#7e5aa6"/>
+          <rect x="420" y="350" width="733" height="56" rx="6" fill="#503874"/>
+          <!-- value labels -->
+          <g font-family="IBM Plex Mono,monospace" font-size="26" fill="#1b1b18">
+            <text x="1194" y="208">242.5 s</text>
+            <text x="1200" y="298">244.4 s</text>
+            <text x="1165" y="388">233.3 s</text>
+          </g>
 
           <!-- lower-is-better arrow -->
-          <line x1="1060" y1="274" x2="580" y2="274" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
-          <text x="1076" y="282" font-family="Inter,sans-serif" font-size="26" fill="#2e2046">lower = faster</text>
+          <line x1="1060" y1="442" x2="580" y2="442" stroke="#2e2046" stroke-width="3" marker-end="url(#ahlb)"/>
+          <text x="1076" y="450" font-family="Inter,sans-serif" font-size="26" fill="#2e2046">lower is better</text>
         </svg>
-        <div class="cap">Same problem, one source, three devices. <i>Bars illustrative —
-          replace with measured wall-clock times.</i></div>
+      </div>
+      <div class="rcard">
+        <span class="prelim">measured</span>
+        <h4>Strong-scaling speedup</h4>
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;margin-top:10px;">
+        <div class="cap" style="position:absolute;left:0;top:50%;transform:translateY(-50%);max-width:230px;margin:0;font-size:30px;line-height:1.25;">Strong scaling on H200s</div>
+        <svg viewBox="0 0 480 300" style="width:100%;max-width:760px;height:auto;display:block;"
+          xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="strong-scaling speedup versus number of H200 GPUs, with ideal linear reference">
+          <!-- gridlines -->
+          <g stroke="#ececec" stroke-width="1">
+            <line x1="70" y1="186" x2="455" y2="186"/>
+            <line x1="70" y1="132" x2="455" y2="132"/>
+            <line x1="70" y1="78"  x2="455" y2="78"/>
+            <line x1="70" y1="24"  x2="455" y2="24"/>
+          </g>
+          <!-- axes -->
+          <line x1="70" y1="18" x2="70" y2="240" stroke="#b4b2a9" stroke-width="1.5"/>
+          <line x1="70" y1="240" x2="455" y2="240" stroke="#b4b2a9" stroke-width="1.5"/>
+          <!-- y ticks (speedup ×) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="16" fill="#9c9a92" text-anchor="end">
+            <text x="60" y="245">0</text><text x="60" y="191">1</text>
+            <text x="60" y="137">2</text><text x="60" y="83">3</text><text x="60" y="29">4</text>
+          </g>
+          <!-- x ticks (GPU count) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="18" fill="#3a3a36" text-anchor="middle">
+            <text x="110" y="262">1</text><text x="217" y="262">2</text>
+            <text x="323" y="262">3</text><text x="430" y="262">4</text>
+          </g>
+          <!-- axis titles -->
+          <text x="262" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" fill="#5f5e5a">GPUs — H200 (140 GB)</text>
+          <text x="22" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" fill="#5f5e5a" transform="rotate(-90 22 130)">speedup ×</text>
+          <!-- ideal linear scaling -->
+          <line x1="110" y1="186" x2="430" y2="24" stroke="#b4b2a9" stroke-width="2.5" stroke-dasharray="7 5"/>
+          <!-- measured -->
+          <polyline points="110,186 217,150 323,147 430,140" fill="none" stroke="#503874" stroke-width="3.5"/>
+          <g fill="#503874">
+            <circle cx="110" cy="186" r="6"/><circle cx="217" cy="150" r="6"/>
+            <circle cx="323" cy="147" r="6"/><circle cx="430" cy="140" r="6"/>
+          </g>
+          <!-- value labels -->
+          <g font-family="IBM Plex Mono,monospace" font-size="17" fill="#1b1b18">
+            <text x="217" y="140" text-anchor="middle">1.7×</text>
+            <text x="448" y="130" text-anchor="end">1.9×</text>
+          </g>
+          <!-- legend (upper-left, above the curve) -->
+          <line x1="92" y1="42" x2="124" y2="42" stroke="#503874" stroke-width="3.5"/>
+          <text x="130" y="47" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">measured</text>
+          <line x1="92" y1="64" x2="124" y2="64" stroke="#b4b2a9" stroke-width="2.5" stroke-dasharray="7 5"/>
+          <text x="130" y="69" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">ideal (linear)</text>
+          <!-- callout bubble under the plateau -->
+          <rect x="138" y="200" width="304" height="32" rx="16" fill="#faece7" stroke="#d85a30" stroke-width="1.5"/>
+          <text x="290" y="221" text-anchor="middle" font-family="Inter,sans-serif" font-size="16" font-weight="600" fill="#993c1d">limited by communication!</text>
+        </svg>
+        </div>
+      </div>
       </div>
     </div>
 
@@ -456,13 +602,6 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
       <div class="colhead">
         <span class="tag">Approach </span>
         <span class="sub">GPU porting</span>
-      </div>
-
-      <div class="card lead">
-        <h3>CPUs and GPUs are not equal</h3>
-        <p>GPUs desire throughput; any serialization has to come after
-        distribution. CPUs handle divergent code paths and focus on
-        vectorization. Blocking over the vertical layers reveals a compromise.</p>
       </div>
 
       <!-- STACKED LOOP FIGURE (CPU over GPU) -->
@@ -544,6 +683,14 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           outer on CPU, inner on GPU.</div>
       </div>
 
+      <div class="cardgrid">
+      <div class="card lead">
+        <h3>CPUs and GPUs are not equal</h3>
+        <p>GPUs desire throughput; any serialization has to come after
+        distribution. CPUs handle divergent code paths and focus on
+        vectorization. Blocking over the vertical layers reveals a compromise.</p>
+      </div>
+
       <div class="card">
         <h3>Column-wise serialization is still a killer</h3>
         <p>Blocking unifies the horizontal physics (most of it). Vertical
@@ -562,24 +709,21 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <p>V100 is 900 GB/s while a full Saphire Rapids is ~600 GB/s. Maximum speedup for a memory-bound workload is limited by the memory bandwidth. Max speedup on Gadi is ~6x per node. </p>
       </div>
     -->
-      <div class="card">
-        <h3>The cost of reproducibility</h3>
-        <p>GPU atomics and reductions reorder floating-point ops. Staying
-        bit-for-bit means refusing the fast nondeterministic path and
-        enforcing fixed-order arithmetic on the device.</p>
+      <div class="card conclusions">
+        <h3>Conclusions</h3>
+        <p>The dynamical core of MOM6 has been successfully ported to GPUs with good performance on both CPUs and GPUs. The parametrizations and physics are underway — expect GPU accelerated MOM6 at a cinema near you soon!</p>
+      </div>
       </div>
     </div>
   </div>
 
   <!-- ===================== BOTTOM BAR ===================== -->
   <div class="bottombar">
-    <div class="meth">
-      <div class="lab">Methods &amp; systems</div>
-      <p>MOM6 · <code>nvfortran -stdpar -O3</code> · NCI Gadi (Xeon Sapphire
-      Rapids, V100, H100) · single source, CPU + GPU.</p>
+    <div class="logos">
+      <div class="logobox"><img src="imgs/nci.png" alt="NCI"></div>
+      <div class="logobox"><img src="imgs/access-nri.png" alt="ACCESS-NRI"></div>
+      <div class="logobox"><img src="imgs/noaa.png" alt="NOAA-GFDL"></div>
     </div>
-    <div class="note">Figures are illustrative placeholders. Measured speedups,
-      roofline and scaling presented live at the session.</div>
     <div class="qr">
       <div class="qrbox">QR →<br>paper / repo</div>
       <div class="who"><b>Jorge Luis Gálvez Vallejo</b><br>NCI · ACCESS-NRI<br>
