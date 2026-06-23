@@ -185,7 +185,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     <div>
       <div class="eyebrow" style="display:none">Porting MOM6 to GPUs</div>
       <div class="title">GPU acceleration of MOM6 using a
-        <span class="k">directive-driven</span> approach</div>
+        <span class="k">standard parallelism</span> approach</div>
       <!-- EDIT authors/affiliations + superscripts here -->
       <div class="authors">Jorge Luis Gálvez Vallejo<sup>1</sup> ·
         Edward Yang<sup>2</sup> · Utheri Wagura<sup>3</sup> · Marshall Ward<sup>3</sup></div>
@@ -399,7 +399,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
             </marker>
           </defs>
 
-          <text x="40" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="40" fill="#2e2046">k-blocking: one do concurrent per block — bk picks the device</text>
+          <text x="40" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="40" fill="#2e2046">k-blocking: one do concurrent per block </text>
 
           <!-- pseudocode -->
           <rect x="40" y="86" width="560" height="330" rx="14" fill="#f2f0f6" stroke="#e0dceb"/>
@@ -459,7 +459,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
 
       <div class="rcard">
         <span class="prelim">measured</span>
-        <h4>Per-kernel speedup</h4>
+        <h4>Physics module speedup</h4>
         <svg viewBox="0 0 520 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="per-kernel GPU speedup, H200 versus 52-core Sapphire Rapids">
           <!-- axes -->
           <line x1="150" y1="20" x2="150" y2="262" stroke="#b4b2a9" stroke-width="1.5"/>
@@ -507,7 +507,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           </defs>
 
           <!-- title + subtitle -->
-          <text x="20" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="38" fill="#2e2046">Across vendors — NVIDIA · Intel · AMD</text>
+          <text x="20" y="52" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="38" fill="#2e2046">Across vendors — NVIDIA · Intel · AMD (1 GPU each)</text>
           <text x="20" y="96" font-family="Inter,sans-serif" font-size="26" fill="#5f5e5a">double-gyre miniapp · total time to solution · lower is better</text>
           <text x="20" y="132" font-family="IBM Plex Mono,monospace" font-size="22" fill="#9c9a92">miniapp · Monash Hackathon, March 2026</text>
 
@@ -543,7 +543,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <span class="prelim">measured</span>
         <h4>Strong-scaling speedup</h4>
         <div style="position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;margin-top:10px;">
-        <div class="cap" style="position:absolute;left:0;top:50%;transform:translateY(-50%);max-width:230px;margin:0;font-size:30px;line-height:1.25;">Strong scaling on H200s</div>
+        <div class="cap" style="position:absolute;left:0;top:50%;transform:translateY(-50%);max-width:230px;margin:0;font-size:30px;line-height:1.25;">Strong scaling on H200s for 300x300x100 domain</div>
         <svg viewBox="0 0 480 300" style="width:100%;max-width:760px;height:auto;display:block;"
           xmlns="http://www.w3.org/2000/svg" role="img"
           aria-label="strong-scaling speedup versus number of H200 GPUs, with ideal linear reference">
