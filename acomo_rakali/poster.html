@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rakali — GPU-native coastal solver (poster)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ---- palette ---- */
+  --ink:#1c1a22;
+  --muted:#5c5766;
+  --line:#d9d4e0;
+  --paper:#fbfaf7;
+  --panel:#f3f0f7;
+  --accent:#503874;      /* purple */
+  --accent-soft:#ece6f3;
+  --coral:#d85a30;       /* coral  */
+  --coral-soft:#fbe7df;
+  --gold:#caa83a;
+  --ok:#3a7d52;
+  /* ---- type ---- */
+  --f-display:"Space Grotesk", system-ui, sans-serif;
+  --f-body:"Inter", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, monospace;
+  /* ---- screen preview scale (print overrides to 1) ---- */
+  --screen-zoom:0.42;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#33303a;}
+body{display:flex;justify-content:center;padding:24px 0;}
+
+.poster{
+  width:841mm;height:1189mm;           /* A0 portrait */
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-body);
+  zoom:var(--screen-zoom);
+  position:relative;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  box-shadow:0 0 0 1px #000, 0 30px 120px rgba(0,0,0,.5);
+}
+
+/* ============ TITLE BAR ============ */
+.titlebar{
+  display:grid;grid-template-columns:auto 1fr auto;
+  align-items:center;gap:36px;
+  padding:46px 60px 40px;
+  border-bottom:5px solid var(--ink);
+  background:
+     linear-gradient(180deg, #fff, var(--paper));
+}
+.authorpics{display:flex;gap:18px;align-items:center;}
+.authorpic{
+  width:160px;height:160px;border-radius:50%;
+  border:3px dashed var(--accent);
+  background:var(--accent-soft) url('imgs/jorge.png') center/cover no-repeat;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-mono);font-size:18px;color:var(--accent);
+  text-align:center;line-height:1.2;overflow:hidden;
+}
+.titletext .eyebrow{
+  font-family:var(--f-mono);font-size:26px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--coral);font-weight:600;
+}
+.titletext h1{
+  font-family:var(--f-display);font-weight:700;
+  font-size:96px;line-height:.98;margin:14px 0 16px;letter-spacing:-.015em;
+}
+.titletext h1 .k{color:var(--accent);}
+.titletext .authors{font-size:34px;font-weight:500;color:var(--ink);}
+.titletext .affil{font-size:25px;color:var(--muted);margin-top:6px;}
+.titlemeta{
+  text-align:right;font-family:var(--f-mono);
+  border-left:3px solid var(--line);padding-left:34px;
+}
+.titlemeta .conf{font-size:34px;font-weight:600;color:var(--accent);letter-spacing:.02em;}
+.titlemeta .sess{font-size:24px;color:var(--muted);margin-top:8px;}
+.titlemeta .mail{font-size:24px;color:var(--coral);margin-top:18px;}
+
+/* ============ BODY: 3 stacked bands inside a grid ============ */
+.body{
+  flex:1;display:grid;grid-template-rows:auto 1fr auto;
+  /* the three columns live in one row spanning the middle */
+}
+.bands{
+  flex:1;display:grid;
+  grid-template-columns:1fr 1.18fr 1fr;
+  gap:0;
+  height:100%;
+}
+.col{padding:40px 46px 40px;display:flex;flex-direction:column;min-height:0;}
+.col.promise{background:var(--paper);border-right:3px solid var(--line);}
+.col.center{background:#fff;border-right:3px solid var(--line);}
+.col.catch{background:var(--paper);}
+
+/* column heads */
+.colhead{margin-bottom:26px;}
+.colhead .tag{
+  display:inline-block;font-family:var(--f-mono);font-weight:600;
+  font-size:24px;letter-spacing:.18em;text-transform:uppercase;
+  padding:10px 18px;border-radius:6px;
+}
+.colhead .sub{font-family:var(--f-display);font-weight:500;font-size:32px;margin-top:14px;color:var(--ink);}
+.col.promise .colhead .tag{background:var(--accent);color:#fff;}
+.col.catch   .colhead .tag{background:var(--coral);color:#fff;}
+.col.center  .colhead .tag{background:var(--ink);color:#fff;}
+
+/* ---- cards ---- */
+.cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+.card{
+  background:var(--panel);border:1.5px solid var(--line);border-radius:14px;
+  padding:24px 26px;
+}
+.card h3{
+  font-family:var(--f-display);font-weight:600;font-size:32px;
+  margin:0 0 10px;line-height:1.05;letter-spacing:-.01em;
+}
+.card p{font-size:23px;line-height:1.38;margin:0;color:var(--muted);}
+.card p .mono{font-family:var(--f-mono);color:var(--ink);font-size:21px;}
+.col.promise .card h3{color:var(--accent);}
+.col.catch   .card h3{color:var(--coral);}
+
+.card.conclusions{
+  grid-column:1 / -1;
+  background:var(--coral-soft);border:2px solid var(--coral);
+}
+.card.conclusions h3{color:var(--coral);}
+.card.conclusions p{color:var(--ink);font-size:24px;}
+
+/* ---- supporting figure wrap (left + right SVG) ---- */
+.figwrap{
+  margin-top:auto;background:#fff;border:1.5px dashed var(--line);
+  border-radius:14px;padding:22px 22px 16px;
+}
+.figwrap svg{width:100%;height:auto;display:block;}
+.figcap{font-family:var(--f-mono);font-size:19px;color:var(--muted);margin-top:10px;line-height:1.3;}
+
+/* ============ CENTER HERO ============ */
+.hero{
+  border:3px solid var(--accent);border-radius:18px;
+  background:linear-gradient(180deg,#fff,var(--accent-soft));
+  padding:32px 34px;margin-bottom:26px;
+}
+.hero .lede{
+  font-family:var(--f-mono);font-size:24px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--coral);font-weight:600;
+}
+.hero h2{
+  font-family:var(--f-display);font-weight:700;font-size:64px;line-height:1.02;
+  margin:16px 0 18px;letter-spacing:-.02em;color:var(--ink);
+}
+.hero h2 .b{color:var(--accent);}
+.hero .subhead{font-size:27px;line-height:1.42;color:var(--ink);margin:0;}
+.hero .subhead .ph{
+  background:#fff4cf;border-bottom:2px solid var(--gold);
+  padding:0 5px;border-radius:3px;font-weight:500;
+}
+
+/* center figure: 3 panels */
+.tripanel{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:22px;}
+.panel{
+  background:#fff;border:1.5px dashed var(--line);border-radius:12px;
+  padding:16px 16px 12px;display:flex;flex-direction:column;
+}
+.panel .ptag{
+  font-family:var(--f-mono);font-size:19px;font-weight:600;
+  color:var(--accent);letter-spacing:.06em;margin-bottom:10px;
+}
+.panel svg{width:100%;height:auto;display:block;}
+.panel .pcap{font-family:var(--f-mono);font-size:17px;color:var(--muted);margin-top:9px;line-height:1.3;}
+.panel .pcap .ph{background:#fff4cf;border-bottom:1.5px solid var(--gold);padding:0 3px;}
+
+/* perf chip */
+.chip{
+  display:flex;align-items:center;gap:16px;justify-content:center;
+  background:var(--ink);color:#fff;border-radius:12px;
+  padding:18px 22px;font-family:var(--f-mono);font-size:24px;margin-top:auto;
+}
+.chip .big{font-family:var(--f-display);font-weight:700;font-size:34px;color:var(--gold);}
+.chip .ph{background:#3a3744;border-radius:4px;padding:1px 7px;}
+
+/* ============ BOTTOM BAR ============ */
+.bottombar{
+  display:grid;grid-template-columns:auto 1fr auto auto;
+  align-items:center;gap:40px;
+  border-top:5px solid var(--ink);
+  padding:30px 60px;background:#fff;
+}
+.logos{display:flex;gap:22px;align-items:center;}
+.logo{
+  height:96px;min-width:170px;padding:0 22px;
+  border:2px dashed var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-mono);font-size:24px;color:var(--accent);
+  background:var(--accent-soft);
+}
+.note{font-family:var(--f-mono);font-size:21px;color:var(--muted);line-height:1.35;}
+.note b{color:var(--coral);}
+.qr{
+  width:120px;height:120px;border:2px dashed var(--coral);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-family:var(--f-mono);font-size:18px;color:var(--coral);background:var(--coral-soft);
+}
+.who{font-family:var(--f-mono);font-size:22px;text-align:right;line-height:1.4;}
+.who b{font-family:var(--f-display);font-size:26px;color:var(--ink);}
+.who span{color:var(--muted);}
+.who a{color:var(--coral);text-decoration:none;}
+
+/* small reusable SVG label styles */
+.svg-mono{font-family:var(--f-mono);}
+.svg-sans{font-family:var(--f-body);}
+
+/* ============ PRINT — A0 portrait ============ */
+@media print{
+  body{background:#fff;padding:0;}
+  .poster{zoom:0.999;box-shadow:none;}
+  @page{size:841mm 1189mm;margin:0;}
+}
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- ================= TITLE BAR ================= -->
+  <div class="titlebar">
+    <div class="authorpics">
+      <div class="authorpic">[author<br>photo]</div>
+    </div>
+    <div class="titletext">
+      <div class="eyebrow">GPU-NATIVE COASTAL &amp; ESTUARINE MODELLING</div>
+      <h1>Rakali: a <span class="k">portable, GPU-first</span><br>solver for coastal seas</h1>
+      <div class="authors">Jorge Luis G&aacute;lvez Vallejo<sup>1</sup> &middot; [co-authors]</div>
+      <div class="affil"><sup>1</sup> NCI &middot; ANU [&middot; other affils]</div>
+    </div>
+    <div class="titlemeta">
+      <div class="conf">[CONFERENCE]</div>
+      <div class="sess">[session &middot; date]</div>
+      <div class="mail">jorge.galvezvallejo@anu.edu.au</div>
+    </div>
+  </div>
+
+  <!-- ================= BODY ================= -->
+  <div class="body">
+    <div class="bands">
+
+      <!-- ========== LEFT: WHAT IS RAKALI ========== -->
+      <div class="col promise">
+        <div class="colhead">
+          <span class="tag">What is Rakali</span>
+          <div class="sub">gpu-native coastal modelling</div>
+        </div>
+
+        <div class="cardgrid">
+          <div class="card">
+            <h3>One solver, every device.</h3>
+            <p>A single Fortran source runs on NVIDIA and AMD GPUs and on multicore CPUs &mdash; <span class="mono">do concurrent</span> for compute, OpenACC for data movement. No vendor lock-in, no second code path.</p>
+          </div>
+          <div class="card">
+            <h3>Built for the coast.</h3>
+            <p>Structured Cartesian and unstructured triangular grids; tides, wetting/drying, rivers, real bathymetry. Estuaries and shelves, not just the open ocean.</p>
+          </div>
+          <div class="card">
+            <h3>GPU-native, not retrofitted.</h3>
+            <p>Device-resident by design &mdash; state lives on the GPU, only diagnostics return. <span class="mono">[~707 Mcells/s]</span> for 2D barotropic on one V100.</p>
+          </div>
+          <div class="card">
+            <h3>Ask &lsquo;what if&rsquo; quickly.</h3>
+            <p>Fast enough that sea-level-rise, storm-surge or dredging scenarios become an afternoon&rsquo;s exploration, not a month&rsquo;s campaign.</p>
+          </div>
+        </div>
+
+        <!-- supporting SVG: one source -> 3 backends fan-out -->
+        <div class="figwrap">
+          <svg viewBox="0 0 560 280" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrP" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 z" fill="#503874"/>
+              </marker>
+            </defs>
+            <!-- source box -->
+            <rect x="22" y="108" width="150" height="64" rx="10" fill="#ece6f3" stroke="#503874" stroke-width="2"/>
+            <text x="97" y="134" text-anchor="middle" class="svg-display" font-family="Space Grotesk" font-weight="600" font-size="22" fill="#503874">one source</text>
+            <text x="97" y="158" text-anchor="middle" class="svg-mono" font-size="15" fill="#5c5766">do concurrent</text>
+
+            <!-- fan-out lines -->
+            <path d="M172,128 C250,128 250,46 330,46"  fill="none" stroke="#503874" stroke-width="2" marker-end="url(#arrP)"/>
+            <path d="M172,140 C250,140 250,140 330,140" fill="none" stroke="#503874" stroke-width="2" marker-end="url(#arrP)"/>
+            <path d="M172,152 C250,152 250,234 330,234" fill="none" stroke="#503874" stroke-width="2" marker-end="url(#arrP)"/>
+
+            <!-- targets -->
+            <rect x="332" y="22" width="206" height="48" rx="9" fill="#fff" stroke="#503874" stroke-width="1.6"/>
+            <text x="350" y="52" class="svg-sans" font-size="20" fill="#1c1a22">NVIDIA GPU <tspan class="svg-mono" font-size="13" fill="#5c5766">nvhpc -gpu</tspan></text>
+
+            <rect x="332" y="116" width="206" height="48" rx="9" fill="#fff" stroke="#503874" stroke-width="1.6"/>
+            <text x="350" y="146" class="svg-sans" font-size="20" fill="#1c1a22">AMD GPU <tspan class="svg-mono" font-size="13" fill="#5c5766">(OpenACC)</tspan></text>
+
+            <rect x="332" y="210" width="206" height="48" rx="9" fill="#fff" stroke="#503874" stroke-width="1.6"/>
+            <text x="350" y="240" class="svg-sans" font-size="20" fill="#1c1a22">multicore CPU <tspan class="svg-mono" font-size="13" fill="#5c5766">gfortran/ifx</tspan></text>
+          </svg>
+          <div class="figcap">One standard-language source &rarr; three back-ends. OpenACC <span style="font-family:var(--f-mono)">enter/exit data</span> keeps fields device-resident; the same kernels lower to GPU or CPU.</div>
+        </div>
+      </div>
+
+      <!-- ========== CENTER: LAKE'S ENTRANCE MONEY SHOT ========== -->
+      <div class="col center">
+        <div class="colhead">
+          <span class="tag">The result</span>
+          <div class="sub">lake&rsquo;s entrance &middot; sea-level rise</div>
+        </div>
+
+        <!-- ALTERNATE HEROES (swap into .hero below as desired):
+             ALT 1 (capability-led):
+               lede: Lake's Entrance · what-if
+               h2:   A full 3D estuary, on any GPU, <span class="b">driven from Python.</span>
+               subhead: Fast enough to explore sea-level-rise scenarios in an afternoon.
+             ALT 2 (short):
+               h2:   We raised the sea at Lake's Entrance — <span class="b">and watched the estuary answer.</span>
+        -->
+        <div class="hero">
+          <div class="lede">Lake&rsquo;s Entrance &middot; sea-level rise</div>
+          <h2>Raise the sea, watch the estuary answer &mdash;<br><span class="b">in 3D, on one GPU.</span></h2>
+          <p class="subhead">Raising mean sea level by <span class="ph">[+1 m]</span> at Lake&rsquo;s Entrance <span class="ph">[shifts the salt intrusion ~N km upstream / changes the tidal range by X%]</span> &mdash; resolved in full 3D and computed in <span class="ph">[minutes]</span> on a single GPU. Rakali is a <span style="font-family:var(--f-mono)">do concurrent</span> + OpenACC coastal solver: one source for CPU and GPU, scripted from Python.</p>
+        </div>
+
+        <!-- 3-panel figure -->
+        <div class="tripanel">
+
+          <!-- (a) the setting -->
+          <div class="panel">
+            <div class="ptag">(a) The setting</div>
+            <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="200" height="150" fill="#eef3f6"/>
+              <!-- land masses -->
+              <path d="M0,0 H200 V46 C150,58 120,40 95,52 C70,64 45,52 0,60 Z" fill="#e7e0d0" stroke="#cbbfa0" stroke-width="1"/>
+              <path d="M0,150 H200 V104 C150,96 120,116 92,104 C66,92 40,108 0,100 Z" fill="#e7e0d0" stroke="#cbbfa0" stroke-width="1"/>
+              <!-- inlet channel -->
+              <path d="M88,52 C90,70 84,84 92,104" fill="none" stroke="#7fb4d6" stroke-width="9" stroke-linecap="round"/>
+              <text x="118" y="80" class="svg-mono" font-size="9" fill="#356a8c">inlet</text>
+              <!-- estuary water -->
+              <ellipse cx="150" cy="78" rx="44" ry="20" fill="#bcd9ea" stroke="#7fb4d6" stroke-width="1"/>
+              <!-- gauges -->
+              <circle cx="90" cy="78" r="4.5" fill="#d85a30"/><text x="78" y="70" class="svg-mono" font-size="8" fill="#d85a30">G1</text>
+              <circle cx="138" cy="72" r="4.5" fill="#d85a30"/><text x="142" y="66" class="svg-mono" font-size="8" fill="#d85a30">G2</text>
+              <circle cx="176" cy="84" r="4.5" fill="#d85a30"/><text x="166" y="100" class="svg-mono" font-size="8" fill="#d85a30">G3</text>
+            </svg>
+            <div class="pcap">Lake&rsquo;s Entrance &mdash; real bathymetry, <span class="ph">[NX&times;NY]</span>, <span class="ph">[K]</span> layers.</div>
+          </div>
+
+          <!-- (b) the response -->
+          <div class="panel">
+            <div class="ptag">(b) The response</div>
+            <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="200" height="150" fill="#fbfaf7"/>
+              <!-- three stacked scenario strips with diverging Δ colour -->
+              <rect x="14" y="14"  width="172" height="34" rx="5" fill="#eef3f6" stroke="#d9d4e0"/>
+              <rect x="14" y="58"  width="172" height="34" rx="5" fill="#fbe7df" stroke="#e7c3b3"/>
+              <rect x="14" y="102" width="172" height="34" rx="5" fill="#f3d7cb" stroke="#d85a30"/>
+              <text x="20" y="35"  class="svg-mono" font-size="11" fill="#356a8c">baseline</text>
+              <text x="20" y="79"  class="svg-mono" font-size="11" fill="#b8542e">+0.5 m</text>
+              <text x="20" y="123" class="svg-mono" font-size="11" fill="#d85a30">+1.0 m</text>
+              <!-- Δ shading swatches -->
+              <rect x="120" y="106" width="58" height="26" rx="3" fill="#d85a30" opacity="0.55"/>
+              <text x="149" y="123" text-anchor="middle" class="svg-mono" font-size="9" fill="#fff">Δ map</text>
+            </svg>
+            <div class="pcap">Δ from baseline (inundation / surface salinity / peak level), <span class="ph">[+0.5 m]</span> &amp; <span class="ph">[+1.0 m]</span>.</div>
+          </div>
+
+          <!-- (c) the number -->
+          <div class="panel">
+            <div class="ptag">(c) The number</div>
+            <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="200" height="150" fill="#fbfaf7"/>
+              <!-- axes -->
+              <line x1="26" y1="16" x2="26" y2="124" stroke="#5c5766" stroke-width="1.4"/>
+              <line x1="26" y1="124" x2="188" y2="124" stroke="#5c5766" stroke-width="1.4"/>
+              <text x="6"  y="74"  class="svg-mono" font-size="9" fill="#5c5766" transform="rotate(-90 6,74)">level / salinity</text>
+              <text x="100" y="142" text-anchor="middle" class="svg-mono" font-size="9" fill="#5c5766">time (tidal cycles)</text>
+              <!-- three scenario lines -->
+              <path d="M26,98 C58,72 80,108 108,80 C136,52 160,96 188,72" fill="none" stroke="#356a8c" stroke-width="2"/>
+              <path d="M26,86 C58,58 80,96 108,66 C136,38 160,84 188,58" fill="none" stroke="#b8542e" stroke-width="2"/>
+              <path d="M26,72 C58,44 80,84 108,50 C136,22 160,70 188,42" fill="none" stroke="#d85a30" stroke-width="2.4"/>
+              <!-- legend -->
+              <text x="120" y="118" class="svg-mono" font-size="8" fill="#356a8c">base</text>
+              <text x="148" y="118" class="svg-mono" font-size="8" fill="#b8542e">+0.5</text>
+              <text x="176" y="118" class="svg-mono" font-size="8" fill="#d85a30">+1.0</text>
+            </svg>
+            <div class="pcap">Gauge <span class="ph">[G2]</span> time series &mdash; the <span class="ph">[hero number]</span> is read from the spread.</div>
+          </div>
+        </div>
+
+        <div class="chip">
+          <span class="big">[T] min</span>
+          <span>/ scenario &middot; 1 GPU</span>
+          <span class="ph">[Lake&rsquo;s Entrance &middot; N&times;M &middot; K layers]</span>
+        </div>
+      </div>
+
+      <!-- ========== RIGHT: CAPABILITIES ========== -->
+      <div class="col catch">
+        <div class="colhead">
+          <span class="tag">Capabilities</span>
+          <div class="sub">physics &middot; portability &middot; python</div>
+        </div>
+
+        <!-- supporting SVG: Python API zero-copy schematic -->
+        <div class="figwrap" style="margin-top:0;margin-bottom:26px;">
+          <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrC" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 z" fill="#d85a30"/>
+              </marker>
+            </defs>
+            <!-- python box -->
+            <rect x="22" y="60" width="190" height="84" rx="12" fill="#fbe7df" stroke="#d85a30" stroke-width="2"/>
+            <text x="117" y="92" text-anchor="middle" font-family="Space Grotesk" font-weight="600" font-size="22" fill="#d85a30">Python / NumPy</text>
+            <text x="117" y="118" text-anchor="middle" class="svg-mono" font-size="14" fill="#5c5766">set &middot; force &middot; step &middot; read</text>
+
+            <!-- fortran box -->
+            <rect x="348" y="60" width="190" height="84" rx="12" fill="#ece6f3" stroke="#503874" stroke-width="2"/>
+            <text x="443" y="92" text-anchor="middle" font-family="Space Grotesk" font-weight="600" font-size="22" fill="#503874">Fortran solver</text>
+            <text x="443" y="118" text-anchor="middle" class="svg-mono" font-size="14" fill="#5c5766">librakali.so</text>
+
+            <!-- bidirectional link -->
+            <path d="M214,92  L346,92"  fill="none" stroke="#d85a30" stroke-width="2.2" marker-end="url(#arrC)"/>
+            <path d="M346,116 L214,116" fill="none" stroke="#503874" stroke-width="2.2" marker-end="url(#arrC)"/>
+            <text x="280" y="50" text-anchor="middle" class="svg-mono" font-size="14" fill="#1c1a22">zero-copy view</text>
+            <text x="280" y="68" text-anchor="middle" class="svg-mono" font-size="13" fill="#5c5766">iso_c_binding &middot; opaque handle</text>
+
+            <!-- device-resident note -->
+            <rect x="348" y="156" width="190" height="32" rx="8" fill="#fff" stroke="#503874" stroke-width="1.4" stroke-dasharray="5 4"/>
+            <text x="443" y="177" text-anchor="middle" class="svg-mono" font-size="13" fill="#503874">state stays device-resident</text>
+          </svg>
+          <div class="figcap">Drive the solver from a script or notebook &mdash; NumPy views map straight onto solver fields; data stays on the GPU, MPI is automatic.</div>
+        </div>
+
+        <div class="cardgrid">
+          <div class="card">
+            <h3>3D coastal physics.</h3>
+            <p>Multilayer hydrostatic and non-hydrostatic; salinity + temperature with a nonlinear equation of state, baroclinic pressure gradient, PP81 / k-&epsilon; / KPP turbulence closures, Smagorinsky lateral mixing, Manning bottom friction.</p>
+          </div>
+          <div class="card">
+            <h3>Portable by construction.</h3>
+            <p>NVHPC (GPU + multicore), gfortran and ifx &mdash; all from the same code. The standard-language <span class="mono">do concurrent</span> expresses the parallelism; OpenACC <span class="mono">enter/exit data</span> keeps fields on the device.</p>
+          </div>
+          <div class="card" style="grid-column:1 / -1;">
+            <h3>Driven from Python.</h3>
+            <p>An opaque-handle <span class="mono">iso_c_binding</span> API exposes the solver to Python with zero-copy NumPy views &mdash; set bathymetry, force, step, and read fields live from a script or notebook. MPI is automatic.</p>
+          </div>
+
+          <div class="card conclusions">
+            <h3>Conclusions</h3>
+            <p>Rakali brings GPU-native performance to 3D coastal modelling without sacrificing portability or scriptability. The Lake&rsquo;s Entrance sea-level experiments show it is fast enough to make scenario exploration routine and interactive. <span style="background:#fff4cf;border-bottom:2px solid var(--gold);padding:0 4px;">[Further physics and validation underway.]</span></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= BOTTOM BAR ================= -->
+  <div class="bottombar">
+    <div class="logos">
+      <div class="logo">[NCI]</div>
+      <div class="logo">[ANU]</div>
+      <div class="logo">[collaborators]</div>
+    </div>
+    <div class="note">
+      <b>Lake&rsquo;s Entrance figures are placeholders;</b> measured results presented live at the session.
+    </div>
+    <div class="qr">repo /<br>paper<br>[QR]</div>
+    <div class="who">
+      <b>Jorge L. G&aacute;lvez Vallejo</b><br>
+      <span>NCI &middot; ANU</span><br>
+      <a href="mailto:jorge.galvezvallejo@anu.edu.au">jorge.galvezvallejo@anu.edu.au</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
