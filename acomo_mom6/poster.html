@@ -188,9 +188,9 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <span class="k">standard parallelism</span> approach</div>
       <!-- EDIT authors/affiliations + superscripts here -->
       <div class="authors">Jorge Luis Gálvez Vallejo<sup>1</sup> ·
-        Edward Yang<sup>2</sup> · Utheri Wagura<sup>3</sup> · Marshall Ward<sup>3</sup></div>
+        Edward Yang<sup>2</sup> · Utheri Wagura<sup>4</sup> · Marshall Ward<sup>3</sup></div>
       <div class="affil"><sup>1</sup> NCI &nbsp;·&nbsp; <sup>2</sup> ACCESS-NRI
-        &nbsp;·&nbsp; <sup>3</sup> NOAA-GFDL</div>
+        &nbsp;·&nbsp; <sup>3</sup> NOAA-GFDL &nbsp;·&nbsp; <sup>4</sup> SAIC</div>
     </div>
     <div class="authorpics">
       <div class="apic"><img src="imgs/jorge.png" alt="Jorge"><div class="nm">Jorge</div></div>
@@ -416,7 +416,8 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
           <text x="66" y="206" font-family="IBM Plex Mono,monospace" font-size="29" fill="#503874">&#160;&#160;do concurrent &amp;</text>
           <text x="66" y="248" font-family="IBM Plex Mono,monospace" font-size="29" fill="#503874">&#160;&#160;&#160;&#160;(kk=block, j=1:nj, i=1:ni)</text>
           <text x="66" y="296" font-family="IBM Plex Mono,monospace" font-size="29" fill="#1b1b18">&#160;&#160;&#160;&#160;A(i,j,kk) = hor_visc(…)</text>
-          <text x="66" y="372" font-family="Inter,sans-serif" font-size="25" fill="#503874">ni · nj · bk independent iters → one launch / block</text>
+          <text x="66" y="360" font-family="Inter,sans-serif" font-size="25" fill="#503874">ni · nj · bk independent iters →</text>
+          <text x="370" y="394" font-family="Inter,sans-serif" font-size="25" fill="#503874">one launch / block</text>
 
           <!-- tiled k-bar -->
           <text x="660" y="118" font-family="Inter,sans-serif" font-size="24" fill="#5f5e5a">do nblock — blocks independent, stepped to bound the launch</text>
@@ -660,7 +661,7 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     -->
       <div class="card conclusions">
         <h3>Conclusions</h3>
-        <p>The dynamical core of MOM6 has been successfully ported to GPUs with good performance on both CPUs and GPUs. The parametrizations and physics are underway — expect GPU accelerated MOM6 at a cinema near you soon!</p>
+        <p>The dynamical core of MOM6 has been successfully ported to GPUs with good performance on both CPUs and GPUs. The parametrizations and physics are underway! Expect GPU accelerated MOM6 at a cinema near you soon!</p>
       </div>
       </div>
     </div>
@@ -671,8 +672,9 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     <div class="logos">
       <div class="logobox"><img src="imgs/nci.png" alt="NCI"></div>
       <div class="logobox"><img src="imgs/access-nri.png" alt="ACCESS-NRI"></div>
+      <div class="logobox"><img src="imgs/saic.png" alt="SAIC"></div>
     </div>
-    <div class="ack" style="flex:1;font-size:24px;color:#5f5e5a;line-height:1.4">
+    <div class="ack" style="flex:1;margin-left:46px;font-size:24px;color:#5f5e5a;line-height:1.4">
       <b style="color:#1b1b18;font-family:var(--disp)">Acknowledgements</b><br>
       k-blocking approach inspired by Pranay&nbsp;[surname].
     </div>
