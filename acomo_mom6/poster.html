@@ -200,7 +200,6 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
     </div>
     <div class="right">
       <b>ACOMO</b><br>
-      [session · date]<br>
       jorge.galvezvallejo@anu.edu.au
     </div>
   </div>
@@ -559,10 +558,10 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
         <span class="prelim">measured</span>
         <h4>Strong-scaling speedup</h4>
         <div style="position:relative;display:flex;align-items:center;justify-content:flex-end;flex:1;min-height:0;margin-top:10px;">
-        <div class="cap" style="position:absolute;left:0;top:50%;transform:translateY(-50%);max-width:230px;margin:0;font-size:30px;line-height:1.25;">Strong scaling on V100s for 800x800x100 domain</div>
+        <div class="cap" style="position:absolute;left:0;top:50%;transform:translateY(-50%);max-width:230px;margin:0;font-size:30px;line-height:1.25;">Strong scaling: V100 (800²×100) vs H200 (1248²×200)</div>
         <svg viewBox="0 0 480 300" style="width:100%;max-width:1215px;height:auto;display:block;"
           xmlns="http://www.w3.org/2000/svg" role="img"
-          aria-label="strong-scaling speedup versus number of V100 GPUs, with ideal linear reference">
+          aria-label="strong-scaling speedup versus number of GPUs for V100 and H200, with ideal linear reference">
           <!-- gridlines -->
           <g stroke="#ececec" stroke-width="1">
             <line x1="70" y1="186" x2="455" y2="186"/>
@@ -584,27 +583,41 @@ html,body{background:#d3cfdc;font-family:var(--body);color:var(--ink)}
             <text x="323" y="262">3</text><text x="430" y="262">4</text>
           </g>
           <!-- axis titles -->
-          <text x="262" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" fill="#5f5e5a">GPUs — V100 (32 GB)</text>
+          <text x="262" y="288" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" fill="#5f5e5a">GPUs</text>
           <text x="22" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" fill="#5f5e5a" transform="rotate(-90 22 130)">speedup ×</text>
           <!-- ideal linear scaling -->
           <line x1="110" y1="186" x2="430" y2="24" stroke="#b4b2a9" stroke-width="2.5" stroke-dasharray="7 5"/>
-          <!-- measured -->
+          <!-- measured: V100 -->
           <polyline points="110,186 217,138 323,91 430,59" fill="none" stroke="#503874" stroke-width="3.5"/>
           <g fill="#503874">
             <circle cx="110" cy="186" r="6"/><circle cx="217" cy="138" r="6"/>
             <circle cx="323" cy="91" r="6"/><circle cx="430" cy="59" r="6"/>
           </g>
-          <!-- value labels -->
-          <g font-family="IBM Plex Mono,monospace" font-size="17" fill="#1b1b18">
-            <text x="227" y="158" text-anchor="middle">1.88×</text>
-            <text x="333" y="111" text-anchor="middle">2.76×</text>
-            <text x="448" y="50" text-anchor="end">3.35×</text>
+          <!-- measured: H200 -->
+          <polyline points="110,186 217,143 323,108 430,84" fill="none" stroke="#c2570f" stroke-width="3.5"/>
+          <g fill="#c2570f">
+            <circle cx="110" cy="186" r="6"/><circle cx="217" cy="143" r="6"/>
+            <circle cx="323" cy="108" r="6"/><circle cx="430" cy="84" r="6"/>
+          </g>
+          <!-- value labels: V100 (above its points) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="17" fill="#503874">
+            <text x="217" y="126" text-anchor="middle">1.88×</text>
+            <text x="323" y="79" text-anchor="middle">2.76×</text>
+            <text x="448" y="47" text-anchor="end">3.35×</text>
+          </g>
+          <!-- value labels: H200 (below its points) -->
+          <g font-family="IBM Plex Mono,monospace" font-size="17" fill="#c2570f">
+            <text x="210" y="165" text-anchor="middle">1.80×</text>
+            <text x="323" y="130" text-anchor="middle">2.45×</text>
+            <text x="448" y="106" text-anchor="end">2.88×</text>
           </g>
           <!-- legend (upper-left, above the curve) -->
           <line x1="92" y1="42" x2="124" y2="42" stroke="#503874" stroke-width="3.5"/>
-          <text x="130" y="47" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">measured</text>
-          <line x1="92" y1="64" x2="124" y2="64" stroke="#b4b2a9" stroke-width="2.5" stroke-dasharray="7 5"/>
-          <text x="130" y="69" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">ideal (linear)</text>
+          <text x="130" y="47" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">V100 (800²×100)</text>
+          <line x1="92" y1="64" x2="124" y2="64" stroke="#c2570f" stroke-width="3.5"/>
+          <text x="130" y="69" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">H200 (1248²×200)</text>
+          <line x1="92" y1="86" x2="124" y2="86" stroke="#b4b2a9" stroke-width="2.5" stroke-dasharray="7 5"/>
+          <text x="130" y="91" font-family="Inter,sans-serif" font-size="16" fill="#3a3a36">ideal (linear)</text>
         </svg>
         </div>
       </div>
