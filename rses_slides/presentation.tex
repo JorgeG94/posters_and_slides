@@ -1,0 +1,789 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{multimedia}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,backgrounds,calc,positioning,shapes.multipart,fit}
+\usepackage[main=english]{babel}
+\usepackage{ragged2e}
+
+\definecolor{fortranPurple}{HTML}{503874}  % poster deep purple
+\definecolor{fortranPurpleMid}{HTML}{7E5AA6}
+\usetheme[
+  accent=fortranPurple,
+  progressbar=foot,
+  sectionpage=progressbar,
+  subsectionpage=progressbar,
+  numbering=fraction,
+  numberrail=section,
+  block=fill,
+  notes=hide,
+  toc=aftertitle,
+  closing=contact
+]{cookie}
+
+% \yes/\prt/\nope and cDone/cWip/cTodo are defined by compiler_table.tex
+
+% complexity badge helper
+\newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
+
+% Widen the footer author box so the three institutions fit (default is .18\paperwidth)
+\makeatletter
+\setbeamertemplate{footline}{%
+  \leavevmode\vbox{%
+    \ifdefstring{\cookie@progressbar}{foot}{\hbox{\cookie@progressrule{\paperwidth}}}{}%
+    \hbox{%
+      \begin{beamercolorbox}[wd=.36\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.02\paperwidth]{footline}%
+        \usebeamerfont{footline}\insertshortauthor
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.46\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.012\paperwidth,rightskip=.012\paperwidth]{footline}%
+        \usebeamerfont{footline}\insertshorttitle%
+        \ifx\insertsectionhead\@empty\else\hfill\cookie@footersection{\insertsectionhead}\fi%
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.18\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.027\paperwidth,rightskip=.014\paperwidth plus 1fil]{footline right}%
+        \usebeamerfont{footline number}\strut\cookie@insertnumber
+      \end{beamercolorbox}%
+    }%
+  }%
+}
+
+\title[Water on GPUs]{Everything is related to water}
+\subtitle{GPU-accelerating the scientific codes that model it}
+\author[NOAA-GFDL \textperiodcentered\ ACCESS-NRI \textperiodcentered\ NCI]{Presenter: Jorge Luis Gálvez Vallejo \textnormal{(NCI)}\\[.25em]
+  }
+\cookieemail{jorge.galvezvallejo@anu.edu.au}
+\institute{NCI \textperiodcentered\ ACCESS-NRI}
+\cookieuni{Australian National University}
+\cookielocation{Canberra, Australia}
+\date{\today}
+\cookietagline{GPU porting \& optimization at NCI}
+%\cookietitleimage{assets/cookie-background.png}
+
+\titlegraphic{%
+  \begin{tabular}{@{}c@{}}
+    \begin{tcolorbox}[enhanced,colback=white,colframe=white,boxrule=0pt,
+        arc=5pt,width=3.1cm,left=7pt,right=7pt,top=8pt,bottom=8pt,
+        halign=center,valign=center,nobeforeafter,box align=center]
+      \includegraphics[height=1.05cm]{assets/nci.png}\\[.8em]
+      \includegraphics[height=1.05cm]{assets/access-nri.png}
+    \end{tcolorbox}%
+  \end{tabular}%
+}
+\cookieclosingtitle{Thank you}
+\cookieclosingtext{One source, many devices --- making water go fast.}
+\cookieclosingqr{https://github.com/marshallward/MOM6/}
+\cookieclosingqrlabel{MOM6 (dev/gpu)}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\section{Who is Jorge?}
+
+\begin{frame}{Who is Jorge?}{A slightly non-linear timeline}
+  \begin{itemize}\setlength\itemsep{2pt}
+    \item Chemical Engineer \hfill \cplx{2 semesters}
+    \item Experimental chemist (natural products) \hfill \cplx{4 semesters}
+    \item Closet theoretical physicisti (did colloidal dynamcs) \hfill \cplx{2 semesters}
+    \item Computational chemist (Water!) \hfill \cplx{2.5 years}
+    \item Computational scientist in \textbf{Chemistry} (GPU accelerated codes) \hfill \cplx{2018--2025}
+    \item Computational scientist in \textbf{Climate, Weather \& Geophysics} \hfill \cplx{2025--now}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What does Jorge do?}
+  \begin{itemize}
+    \item Mostly \textbf{GPU porting and optimization} of existing codebases.
+    \item Some CPU optimizations too, but very limited
+    \item Overall maintenance and upgrade of codebases:
+      \begin{itemize}
+        \item \textbf{Quality-of-life:} refactors, better build systems, automated testing.
+        \item \textbf{Algorithmic:} rewrite parts of the code to be more parallelizable.
+      \end{itemize}
+    \item \textbf{Performance optimization} --- make code go as fast as humanly possible, within the expectations of the project.
+    \item I am passionate about build systems (CMake $>$ Meson)
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{What is Jorge doing?}{Everything is related to water!}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item \textbf{ANUGA} --- a flooding simulator. \\ \cplx{unstructured grids \textperiodcentered\ shallow-water equations \textperiodcentered\ purely 2-D}
+    \item \textbf{MOM6} --- circulating water around the world. \\ \cplx{structured grids \textperiodcentered\ mainly 3-D}
+    \item \textbf{Rakali} --- my hobby / learning platform for the above two codes.
+  \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{ANUGA}
+
+\begin{frame}{ANUGA}{CDAC (India) \textperiodcentered\ ANU \textperiodcentered\ GA \textperiodcentered\ NCI --- via an MOU}
+  \begin{columns}[T,onlytextwidth]
+    \column{.53\textwidth}
+      \begin{itemize}
+        \item CDAC uses ANUGA to model \textbf{flooding emergency response} around rivers during the Monsoon season.
+        \item Faster code $\Rightarrow$ better, more accurate simulations in less time.
+        \item Python-orchestrated, \textbf{C backend} for speed.
+      \end{itemize}
+    \column{.43\textwidth}
+      \begin{block}{State of the code when I started}
+        \begin{itemize}
+          \item 4 parallel backends: serial C, SIMD C, OpenMP, OpenACC
+          \item GPU: sparse, poorly integrated, untested
+          \item Great unit \& automated testing
+        \end{itemize}
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ANUGA: towards a GPU-accelerated codebase}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item For GPUs to be worth it, \textbf{everything} needs to be accelerated.
+    \item You are only as fast as your slowest bit. (Amdahl's law)
+    \item Re-architect how the codebase works.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{How does GPU acceleration work?}
+  \begin{itemize}
+    \item GPUs are fast because they have \textbf{thousands} of cores; CPUs have hundreds.
+    \item The problem must be very parallel to suit a GPU \cplx{(sometimes all you need is a large problem)}.
+    \item Problems are \textbf{memory-} or \textbf{compute-bound}:
+      \begin{itemize}
+        \item \emph{Memory:} how fast you can access the elements for a computation.
+        \item \emph{Compute:} how fast you can do the arithmetic on them.
+      \end{itemize}
+    \item Separate memory address spaces --- the CPU has its memory, the GPU its own.
+      \begin{itemize}
+        \item How do they talk? The \textbf{bus} --- a limiting factor you must optimize around.
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Writing very fast GPU code: A six step program}
+  \begin{enumerate}\setlength\itemsep{4pt}
+    \item Allocate all memory at the start and reuse it.
+    \item Minimize large CPU$\leftrightarrow$GPU transfers during the main computational loop.
+    \item Make sure the problem is large enough to use the GPU efficiently.
+    \item Expose the maximum amount of parallelism possible
+    \item Leave only very small, insignificant operations on the CPU.
+    \item Profit.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Expressing parallelism}
+  \begin{itemize}
+    \item Loops are inherently \textbf{serial}: \texttt{do i=1, i=2, \dots}
+    \item Parallelism is expressed via \textbf{pragmas}: \texttt{!\$omp parallel do}.
+    \item \emph{You} tell the program a region can run in parallel --- get it wrong and the code is wrong.
+  \end{itemize}
+  \begin{block}{Lessons in parallelism}
+    \begin{itemize}
+      \item No side effects outside the loop (no writing to global state; thread safety).
+      \item Minimize branching (\texttt{if}, \texttt{switch}, \texttt{case}).
+      \item Make it easy for the compiler to optimize --- simple is always best.
+      \item No fancy object-oriented shenanigans inside hot loops.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{ANUGA's hot loop: fluxes over triangles}
+  \begin{columns}[T,onlytextwidth]
+    \column{.56\textwidth}
+      \begin{cookiecode}[title={compute\_fluxes --- the main kernel}]{C}
+// one pragma flips CPU -> GPU
+#pragma omp target teams loop
+for (n = 0; n < n_triangles; n++) {
+  for (i = 0; i < 3; i++) {
+    // local Riemann solve -> edge flux
+    flux_edge(n, i, ...);
+  }
+  explicit_update[n] = ...;       // writes only n
+}
+      \end{cookiecode}
+    \column{.42\textwidth}
+      \begin{itemize}
+        \item One loop over \textbf{every triangle} --- \texttt{do n = 1, n\_triangles}.
+        \item Each triangle is \textbf{independent}: reads its neighbours, writes only itself.
+        \item Exactly the ``no side effects'' contract $\Rightarrow$ safe to parallelize.
+        \item Most of the runtime lives here --- accelerate this loop and you accelerate ANUGA.
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Road to GPU ANUGA}{MPI vs OpenMP --- and why you want both}
+  \begin{itemize}
+    \item ANUGA was already parallelized with \textbf{MPI} (distributed memory).
+    \item ANUGA is \textbf{memory-bound} due to unstructured grids.
+  \end{itemize}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{block}{MPI}
+        Divides the domain into subdomains, each executed concurrently --- reduces \textbf{memory pressure} by making each problem smaller.
+      \end{block}
+    \column{.48\textwidth}
+      \begin{block}{OpenMP}
+        Keeps the full domain, but launches \textbf{threads} to evaluate it in parallel.
+      \end{block}
+  \end{columns}
+  \vspace{.3em}
+  \begin{exampleblock}{The mix that gets you GPUs}
+    One MPI subdomain \textbf{per GPU}; each GPU gets a very large subdomain.
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{How to get GPUs?}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \begin{itemize}
+        \item Because ANUGA was already OpenMP-parallel, the trick was to switch\\
+          \texttt{\#pragma omp parallel for} $\to$\\
+          \texttt{\#pragma omp target teams loop}.
+        \item The real pain was the \textbf{memory}:
+          \begin{itemize}
+            \item Refactor the backend from a single global domain state into an \emph{owning} object.
+            \item Allocate all memory upfront and manage it efficiently.
+          \end{itemize}
+      \end{itemize}
+    \column{.48\textwidth}
+      \begin{cookiecode}[title={the evolve loop}]{Python}
+domain.set_memory(n_triangles, quantities)
+domain.distribute(n_gpus)
+for t in range(t_end):
+    domain.evolve(t)
+    if t == t_print:
+        domain.print_console_update()
+      \end{cookiecode}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{What did we achieve?}{ANUGA on GPUs}
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item CDAC simulation: \textbf{4 hours on 4416 cores} $\to$ the same sim on \textbf{4 nodes (16 GPUs) in under an hour}.
+    \item $\sim$\textbf{10$\times$} savings in SUs \cplx{(speedup is trickier to compare across different units)}.
+    \item A realistic $\sim$16M-triangle simulation used to need a big compute node --- now it runs on your \textbf{laptop} \cplx{(given a GPU with $\geq$\,8\,GB of memory)}.
+  \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{MOM6}
+
+\begin{frame}{Porting MOM6 to GPUs}{The team driving the work}
+  \vfill
+  \centering
+  \begin{columns}[T,onlytextwidth]
+    \column{.24\textwidth}\centering
+      \includegraphics[width=2.3cm]{assets/jorge_c.png}\\[.5em]
+      {\small\textbf{Jorge Gálvez Vallejo}}\\{\footnotesize NCI \textperiodcentered\ support}
+    \column{.24\textwidth}\centering
+      \includegraphics[width=2.3cm]{assets/marshall_c.png}\\[.5em]
+      {\small\textbf{Marshall Ward}}\\{\footnotesize NOAA-GFDL}
+    \column{.24\textwidth}\centering
+      \includegraphics[width=2.3cm]{assets/ed_c.png}\\[.5em]
+      {\small\textbf{Edward Yang}}\\{\footnotesize ACCESS-NRI}
+    \column{.24\textwidth}\centering
+      \includegraphics[width=2.3cm]{assets/utheri_c.png}\\[.5em]
+      {\small\textbf{Utheri Wagura}}\\{\footnotesize SAIC}
+  \end{columns}
+  \vfill
+  {\footnotesize\itshape Also: Micael Oliveira (ACCESS-NRI).}
+\end{frame}
+
+\begin{frame}{MOM6 and the GPU debacle}
+  \begin{itemize}
+    \item The same ideas apply to MOM6 --- but it carries more constraints:
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Keep CPU performance.
+        \item Minimize duplicated code.
+        \item Keep bitwise reproducibility.
+        \item Keep the consortium happy.
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Why is MOM6 harder?}
+  \begin{itemize}
+    \item We can't upend the codebase to write fast code without killing CPU performance or making very large changes.
+    \item Performance is limited by the algorithm that keeps \emph{both} CPU and GPU happy --- \cplx{luckily there are good compromises}.
+    \item \textbf{Iteration is slow:} MOM6 is not very well tested, in the automation sense.
+      \begin{itemize}
+        \item Well-tested $=$ fast, automated tests with little room for programmer error.
+        \item MOM6 is extensively tested by many people, but the automation is tricky --- especially for GPUs.
+        \item A 5\% slowdown can drasticallt annoy a lot of people
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The goal}{Two partners, two targets}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{block}{ACCESS-NRI}
+        CPU/GPU \textbf{parity} in terms of SUs.
+      \end{block}
+    \column{.48\textwidth}
+      \begin{block}{NOAA-GFDL}
+        GPU must be \textbf{faster} than CPUs on their machines.
+      \end{block}
+  \end{columns}
+    \begin{itemize}\setlength\itemsep{5pt}
+    \item Driven by \textbf{NOAA-GFDL} and \textbf{ACCESS-NRI}; my role is to \textbf{support} them.
+    \item Lots of investigating corner cases and performance issues.
+    \item Multi-GPU support, compiler bugs, and everything in between.
+  \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------------
+% ---- selected slides spliced in from the MOM6 GPU deck -------------
+% --------------------------------------------------------------------
+\begin{frame}{Where the work lives, and what is ported}
+  \centering
+  \includegraphics[width=.96\textwidth,height=.72\textheight,keepaspectratio]{graph_mom.pdf}
+
+  \vspace{.4em}
+  \footnotesize \textbf{Dynamical core: ported \& verified.} Parametrizations / physics \emph{underway} ---
+  tracers done; diabatic, ALE and lateral mixing in progress.
+\end{frame}
+
+% =====================================================================
+\section{Standard parallelism}
+
+\begin{frame}[fragile]{\texttt{do concurrent}: the next best thing since sliced bread}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \begin{cookiecode}[title=Standard Fortran]{Fortran}
+do concurrent (k=1:nk,j=1:nj,i=1:ni)
+  c(i,j,k) = a(i,j,k)
+end do
+      \end{cookiecode}
+    \column{.5\textwidth}
+      \begin{cookiecode}[title=Directive equivalents]{Fortran}
+!$omp target teams loop collapse(3)
+do k = 1, nk
+  do j = 1, nj
+    do i = 1, ni
+      c(i,j,k) = a(i,j,k)
+    end do
+  end do
+end do
+      \end{cookiecode}
+  \end{columns}
+  \vspace{.2em}
+  {\footnotesize
+  \begin{itemize}\setlength\itemsep{1pt}
+    \item A \textbf{contract}: every iteration is independent and thread-safe; for offload, called procedures must be \texttt{pure}.
+    \item Idiomatic, no vendor pragmas --- and a routine containing \texttt{do concurrent} can itself stay \texttt{pure}.
+  \end{itemize}}
+\end{frame}
+
+\begin{frame}{Data movement}
+  \centering
+  \begin{tikzpicture}[node distance=6mm]
+    \node[cookie node,align=center,minimum width=3cm,minimum height=1.3cm] (cpu) {CPU \\ \footnotesize host \textperiodcentered\ few fat cores};
+    \node[cookie accent node,align=center,minimum width=3cm,minimum height=1.3cm,right=3.4cm of cpu] (gpu) {GPU \\ \footnotesize device \textperiodcentered\ many cores};
+    \draw[cookie arrow,transform canvas={yshift=2.2mm}] (cpu) -- node[above,font=\scriptsize]{\texttt{map(to:)}} (gpu);
+    \draw[cookie arrow,densely dashed,transform canvas={yshift=-2.2mm}] (gpu) -- node[below,font=\scriptsize]{\texttt{update from}} (cpu);
+    \node[below=14mm of $(cpu)!.5!(gpu)$,font=\scriptsize\ttfamily,text=cookieMuted] {interconnect (PCIe / NVLink)};
+  \end{tikzpicture}
+  \vspace{.9em}
+  \begin{itemize}
+    \item Compute stays in \texttt{do concurrent}; OpenMP \texttt{target~\dots~map} keeps arrays \textbf{resident} on the device.
+    \item Minimize transfers: work backwards from the kernels, keep data on the GPU between steps.
+    \item OpenMP mapping is portable across NVIDIA, AMD and Intel.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{do concurrent} support across compilers}{Each vendor offloads to \emph{its} GPU --- NVIDIA is the most mature, hands down}
+  \centering
+  \scalebox{0.88}{\input{compiler_table.tex}}
+\end{frame}
+
+% =====================================================================
+\section{The dynamical core}
+
+\begin{frame}{Split RK2 timestepping}{\texttt{step\_MOM} --- repeated \texttt{n\_timesteps} times}
+  \vspace{-2mm}
+  \begin{columns}[T,onlytextwidth]
+    \column{.49\textwidth}
+      \begin{cookiecard}[title=Predictor (build accel.\ at $n$)]
+        \footnotesize
+        \begin{enumerate}\setlength\itemsep{1pt}
+          \item PressureForce $\;PF=-\partial_x M$
+          \item Coriolis + advection $\;CA$
+          \item $u_{bc}=CA+PF+\mathrm{diffu}$
+          \item vert.\ visc.\ coeffs \hfill\cplx{halo $\eta$}
+          \item barotropic coupling
+          \item \textbf{btstep} --- subcycle $\times\,n_{bt}$
+          \item $u^{*}=u^{n}+\mathrm{d}t(u_{bc}+u_{bt})$
+          \item vertvisc (implicit, tridiag.)
+          \item continuity $\to h^{*},uh,vh$
+          \item PressureForce$(h^{*})$
+        \end{enumerate}
+      \end{cookiecard}
+    \column{.49\textwidth}
+      \begin{cookiecard}[title=Corrector (take the step)]
+        \footnotesize
+        \begin{enumerate}\setlength\itemsep{1pt}\setcounter{enumi}{10}
+          \item horizontal\_viscosity (Laplacian)
+          \item Coriolis + advection $(u_{av})$
+          \item $u_{bc}=CA+PF+\mathrm{diffu}$
+          \item \textbf{btstep} --- subcycle $\times\,n_{bt}$
+          \item $u^{n+1}=u^{n}+\mathrm{d}t(u_{bc}+u_{bt})$
+          \item vertvisc (implicit, tridiag.)
+          \item continuity $\to h^{n+1}$ \hfill\cplx{halo $u,h$}
+          \item Coriolis post (diagnostics)
+        \end{enumerate}
+      \end{cookiecard}
+  \end{columns}
+  \vspace{.1em}
+
+  {\footnotesize Each block is one or a few \texttt{do concurrent} kernels; halo passes (\texttt{pass\_*}) interleave and overlap.}
+\end{frame}
+
+\begin{frame}{Domain decomposition \& halo updates}
+  \begin{columns}[c,onlytextwidth]
+    \column{.42\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=.62,every node/.style={font=\scriptsize}]
+        \foreach \x in {0,2,4} \foreach \y in {0,2,4}
+          \draw[cookieLine,fill=cookieSoft] (\x,\y) rectangle ++(2,2);
+        % highlight center tile + halo
+        \draw[cookieAccent,line width=1pt,fill=cookieAccent!10] (2,2) rectangle ++(2,2);
+        \draw[cookieAccent,densely dashed] (1.7,1.7) rectangle ++(2.6,2.6);
+        \foreach \dx/\dy in {0/2.6,0/-2.6,2.6/0,-2.6/0}
+          \draw[cookie arrow,cookieAccent] (3,3) ++(0,0) -- ++(\dx*.42,\dy*.42);
+        \node at (3,-1) {nz \emph{not} decomposed};
+      \end{tikzpicture}
+    \column{.55\textwidth}
+      \begin{itemize}
+        \item Horizontal \texttt{ni$\times$nj} tiled across MPI ranks (FMS); the \textbf{vertical \texttt{nz} is never split} --- columns stay whole.
+        \item Each tile carries a \textbf{halo} (width = stencil radius, 1--4 cells).
+        \item \texttt{pass\_var} / \texttt{pass\_vector} refresh faces before each stencil.
+        \item \textbf{GPU:} halos exchanged with \texttt{omp\_offload} (GPUDirect) --- no host staging.
+      \end{itemize}
+      \vspace{.3em}
+      \cplx{compute $\propto$ volume $N/P$ \quad comm $\propto$ surface $\propto \sqrt{1/P}$}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Six algorithmic motifs}
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{@{}clccc@{}}
+    \toprule
+    \# & Motif & Work & Depth & GPU fit \\
+    \midrule
+    1 & Pointwise / map (\texttt{ni\,nj\,nz})        & $\Theta(N)$        & $\Theta(1)$           & ideal \\
+    2 & Horizontal / Laplacian stencil               & $\Theta(N)$        & $\Theta(1)$           & great + halo \\
+    3 & Tridiagonal column solve (Thomas)            & $\Theta(N)$        & $\Theta(n_z)$         & good (jik) \\
+    4 & Iterative column solve                       & $\Theta(N\cdot it)$& $\Theta(n_z\cdot it)$ & harder (divergence) \\
+    5 & Barotropic subcycle (2-D split-explicit)     & $\Theta(H\,n_{bt})$& $\Theta(n_{bt})$      & openacc overhead bound \\
+    6 & Halo exchange (pack / transfer / unpack)     & $\Theta(\text{surf})$ & $\Theta(\log P)$   & overhead-bound \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{.7em}
+
+  \footnotesize $N=n_i n_j n_z$ cells \quad $H=n_i n_j$ one level \quad $it=$ iteration count \quad $P=$ ranks
+\end{frame}
+
+% ---- motif slides ----
+\begin{frame}[fragile]{Motif 1 --- Pointwise / map}
+  \begin{columns}[c,onlytextwidth]
+    \column{.32\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[cookie accent node,minimum size=1cm] (c) {$\bullet$};
+        \node[font=\scriptsize,below=5mm of c] {reads only $(i,j,k)$};
+      \end{tikzpicture}
+    \column{.64\textwidth}
+      \begin{cookiecode}[title=embarrassingly parallel]{Fortran}
+do concurrent (k=1:nz, j=1:nj, i=1:ni)
+  C(i,j,k) = f( A(i,j,k), B(i,j,k) )
+end do
+      \end{cookiecode}
+  \end{columns}
+  \vspace{.3em}
+  \begin{itemize}
+    \item EoS, scaling, tracer sources. \cplx{Work $\Theta(N)$ \textperiodcentered\ depth $\Theta(1)$ \textperiodcentered\ no comm}
+    \item Memory-bound, perfect occupancy --- the easy 80\%.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Motif 2 --- Horizontal / Laplacian stencil}
+  \begin{columns}[c,onlytextwidth]
+    \column{.32\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=.7,nb/.style={draw=cookieAccent,line width=.8pt,fill=cookieAccent!22,minimum size=.7cm,rounded corners=2pt}]
+        \draw[cookieAccent!55,line width=.8pt] (-1.1,0)--(1.1,0) (0,-1.1)--(0,1.1);
+        \node[cookie accent node,minimum size=.7cm] (c) at (0,0) {};
+        \node[nb] at (-1.1,0) {};
+        \node[nb] at (1.1,0) {};
+        \node[nb] at (0,1.1) {};
+        \node[nb] at (0,-1.1) {};
+        \node[font=\scriptsize] at (0,-1.9) {5-point: $i\pm1,\,j\pm1$};
+      \end{tikzpicture}
+    \column{.64\textwidth}
+      \begin{cookiecode}[title=neighbour reads]{Fortran}
+do concurrent (k=1:nz, j, i)
+  L = A(i-1,j,k) + A(i+1,j,k)    &
+    + A(i,j-1,k) + A(i,j+1,k)    &
+    - 4*A(i,j,k)
+end do
+      \end{cookiecode}
+  \end{columns}
+  \vspace{.2em}
+  \begin{itemize}
+    \item Horizontal viscosity, Coriolis+KE, $\partial_x$ pressure. \cplx{Work $\Theta(N)$ \textperiodcentered\ depth $\Theta(1)$ \textperiodcentered\ needs halo}
+    \item Memory-bound with neighbour reuse --- coalescing matters.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Motif 3 --- Tridiagonal column solve (Thomas)}
+  \begin{columns}[c,onlytextwidth]
+    \column{.3\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=.62]
+        \foreach \k in {0,1,2,3,4}
+          \node[cookie accent node,minimum size=.5cm] at (0,-\k) {};
+        \node[font=\tiny,text=cookieMuted,above=0pt] at (0,0.25) {$k{=}1$};
+        \node[font=\tiny,text=cookieMuted,below=0pt] at (0,-4.25) {$k{=}n_z$};
+        \draw[cookie arrow] (-1.05,-0.2) -- (-1.05,-3.8);
+        \node[font=\scriptsize,rotate=90] at (-1.5,-2) {elim};
+        \draw[cookie arrow] (1.05,-3.8) -- (1.05,-0.2);
+        \node[font=\scriptsize,rotate=90] at (1.5,-2) {subst};
+      \end{tikzpicture}
+    \column{.66\textwidth}
+      \begin{itemize}
+        \item Implicit vertical viscosity / diffusion: $a_k x_{k-1}+b_k x_k+c_k x_{k+1}=d_k$.
+        \item Thomas: $O(n_z)$ \textbf{sequential} sweep per column; columns independent.
+        \item Map \texttt{ni\,nj} threads, each walking its own column $\Rightarrow$ the \textbf{jik} ordering.
+      \end{itemize}
+      \vspace{.3em}
+      \cplx{Work $\Theta(N)$ \textperiodcentered\ depth $\Theta(n_z)$ \textperiodcentered\ columns fully parallel}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Motif 4 --- Iterative column solve}
+  \begin{cookiecode}[title=data-dependent iteration count]{Fortran}
+do concurrent (j, i)             ! columns parallel
+  iter = 0
+  do while (.not. converged .and. iter < max)
+    ! update kappa(k) from shear; solve tridiagonal column; check residual
+    iter = iter + 1
+  end do
+end do
+  \end{cookiecode}
+  \begin{itemize}
+    \item Shear-driven mixing (kappa-shear), implicit / convective adjustment.
+    \item \cplx{Work $\Theta(N\cdot it)$ \textperiodcentered\ depth $\Theta(n_z\cdot it)$}
+    \item GPU pain: \textbf{thread divergence} --- columns converge at different rates.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Motif 5 --- Barotropic subcycle (2-D split-explicit)}
+  \begin{cookiecode}[title={fast surface mode, small steps}]{Fortran}
+do m = 1, n_bt                   ! n_bt ~ 10-60, dt_bt = dt/n_bt
+  eta = eta - dt_bt * div(D*U)   ! 2-D continuity   (pointwise + halo)
+  U   = U   - dt_bt * (g*grad(eta) + ...)  ! 2-D momentum (stencil)
+  call halo_exchange(eta, U)     ! every substep
+end do
+  \end{cookiecode}
+  \begin{itemize}
+    \item Cheap per substep but \textbf{sequential} in $m$. \cplx{Work $\Theta(H\,n_{bt})$ \textperiodcentered\ depth $\Theta(n_{bt})$}
+    \item Tiny 2-D kernels $\times\,n_{bt}$ launches $\times$ halo each $\Rightarrow$ \textbf{openacc overhead bound}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Motif 6 --- Halo exchange: pack / transfer / unpack}
+  \centering
+  \begin{tikzpicture}[node distance=12mm,
+      ph/.style={cookie node,align=center,minimum height=1.15cm,minimum width=2.2cm,font=\scriptsize},
+      lbl/.style={font=\scriptsize\bfseries,text=cookieAccent,align=center}]
+    \node[ph] (faces) {tile-edge faces\\\footnotesize(strided)};
+    \node[ph,right=of faces] (buf1) {send buffer\\\footnotesize(contiguous)};
+    \node[ph,right=of buf1] (buf2) {recv buffer\\\footnotesize neighbour};
+    \node[ph,right=of buf2] (ghost) {ghost cells};
+    \draw[cookie arrow] (faces) -- node[above,lbl]{pack\\\emph{gather}} (buf1);
+    \draw[cookie arrow] (buf1) -- node[above,lbl]{transfer\\\emph{MPI}} (buf2);
+    \draw[cookie arrow] (buf2) -- node[above,lbl]{unpack\\\emph{scatter}} (ghost);
+  \end{tikzpicture}
+  \vspace{.5em}
+  \begin{itemize}
+    \item \textbf{pack / unpack} are on-device \emph{gather / scatter} kernels --- depth $\Theta(1)$, \textbf{non-coalesced}, work $\propto$ surface.
+    \item \textbf{transfer} is the MPI comm. \cplx{$\Theta(\text{halo}\cdot(n_i{+}n_j)\cdot n_z/\sqrt{P})$ vs compute $\Theta(N/P)$ --- strong scaling set by surface/volume.}
+    \item Every variable $\times$ direction $\times$ phase is its own kernel $\Rightarrow$ \textbf{many tiny kernels}, so the exchange is \textbf{OpenACC launch-overhead bound}, not bandwidth bound.
+    \item \textbf{GPUDirect:} buffers stay on the device --- no host staging.
+  \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{Results on GPUs}
+
+\begin{frame}{Per-kernel GPU speedup}{1 H200 vs a 52-core Sapphire Rapids node \textperiodcentered\ domain 300$\times$300$\times$100}
+  \centering
+  \begin{tikzpicture}[x=1.4cm,y=.85cm]
+    % axis
+    \draw[cookieMuted] (0,-.5) -- (0,4.5);
+    \draw[cookieMuted] (0,-.5) -- (5.2,-.5);
+    \draw[cookieAlert,densely dashed] (1,-.5) -- (1,4.7) node[above,font=\scriptsize,text=cookieAlert]{1$\times$ (CPU)};
+    \foreach \y/\name/\val/\col in {4/barotropic/4.3/cookieAccent, 3/vert.\ visc/2.8/cookieAccent, 2/continuity/1.9/cookieAccent, 1/Coriolis/1.6/cookieAccent, 0/hor.\ visc/1.0/cookieMuted}{
+      \node[left,font=\scriptsize] at (-.05,\y) {\name};
+      \fill[\col] (0,\y-.28) rectangle (\val,\y+.28);
+      \node[right,font=\scriptsize\ttfamily] at (\val+.05,\y) {\val$\times$};
+    }
+    \node[right,font=\scriptsize,text=cookieMuted] at (3.2,0) {(blocked: continuity, Coriolis, hor.\ visc)};
+  \end{tikzpicture}
+  \vspace{.3em}
+
+  \footnotesize Every ported dycore kernel meets or beats the full CPU node on a \textbf{single} GPU.
+\end{frame}
+
+\begin{frame}{Strong scaling, multi-GPU}{GPUDirect halo exchange \textperiodcentered\ speedup vs 1 GPU}
+  \begin{columns}[c,onlytextwidth]
+    \column{.6\textwidth}
+      \centering
+      \begin{tikzpicture}[x=1.55cm,y=1.45cm]
+        \draw[cookieMuted,->] (1,1) -- (4.4,1) node[right,font=\scriptsize]{GPUs};
+        \draw[cookieMuted,->] (1,1) -- (1,4.5) node[above,font=\scriptsize]{speedup};
+        \foreach \x in {1,2,3,4} \node[below,font=\scriptsize] at (\x,1) {\x};
+        \foreach \y in {1,2,3,4} \node[left,font=\scriptsize] at (1,\y) {\y$\times$};
+        % ideal
+        \draw[cookieLine,densely dashed,line width=1pt] (1,1) -- (4,4);
+        % V100
+        \draw[cookieAccent,line width=1.3pt] (1,1) -- (2,1.88) -- (3,2.76) -- (4,3.35);
+        \foreach \x/\y in {1/1,2/1.88,3/2.76,4/3.35} \fill[cookieAccent] (\x,\y) circle(1.6pt);
+        % H200
+        \draw[cookieWarm,line width=1.3pt] (1,1) -- (2,1.80) -- (3,2.45) -- (4,2.88);
+        \foreach \x/\y in {1/1,2/1.80,3/2.45,4/2.88} \fill[cookieWarm] (\x,\y) circle(1.6pt);
+      \end{tikzpicture}
+    \column{.36\textwidth}
+      \footnotesize
+      \textcolor{cookieAccent}{\rule{1.4em}{2pt}}~V100 (800$^2\times$100)\\[.3em]
+      \textcolor{cookieWarm}{\rule{1.4em}{2pt}}~H200 (1248$^2\times$200)\\[.3em]
+      \textcolor{cookieLine}{\rule{1.4em}{2pt}}~ideal (linear)
+      \vspace{.6em}
+      \begin{itemize}
+        \item Up to \textbf{3.35$\times$} on 4 GPUs.
+        \item Parallel efficiency at 4 GPUs: \textbf{84\%} (V100), \textbf{72\%} (H200).
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{How do I make sure we get the best performance?}
+  \begin{itemize}
+    \item If there are \textbf{no constraints}, I'm happiest:
+      \begin{itemize}
+        \item Rewrite the algorithm entirely.
+        \item Explore hardware-level optimizations.
+        \item Re-express the parallelism as faster operations --- e.g.\ BLAS library calls.
+      \end{itemize}
+    \item \textbf{Profiler-driven optimization} --- tools that tell you how far you are from the optimal runtime.
+    \item Know the \textbf{physics} to understand what is legal and what is not.
+  \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{Rakali --- my playground}
+
+\begin{frame}{Hobby / learning / stubbornness project: Rakali}
+  \begin{itemize}\setlength\itemsep{4pt}
+    \item My playground model, where I learned SWE and ocean dynamics.
+    \item \textbf{GPU-accelerated from scratch} --- all the best practices for data transfer, memory, etc.
+    \item Written in \textbf{Fortran}, to demonstrate you don't need C/C++.
+    \item A good way to learn how to do things I don't (or didn't) fully understand.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Rakali}{One playground, three models}
+  \begin{itemize}
+    \item \textbf{Explicit} 2-D/3-D hydrodynamic model, structured/unstructured grids.
+      \begin{itemize}
+        \item Flooding, erosion, tides; easy to couple with waves.
+        \item CFL keeps the timestep in check --- good for awful estuarine physics.
+      \end{itemize}
+    \item \textbf{Implicit} 2-D/3-D hydrodynamic model, structured/unstructured grids.
+      \begin{itemize}
+        \item Same as the explicit but with implicit timestepping.
+        \item Think SCHISM, Delft3D, maybe a bit of ROMS.
+      \end{itemize}
+    \item \textbf{Full global circulation model} --- basically MOM6/MITgcm with regional capabilities baked in.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Rakali: one code, two regimes}{structured Cartesian \emph{and} unstructured triangular grids}
+  \begin{columns}[T,onlytextwidth]
+    \column{.49\textwidth}
+      \begin{block}{Coastal --- production-mature}
+        \begin{itemize}
+          \item HLL/HLLC (structured) \textperiodcentered\ KNP central-upwind (triangles)
+          \item 2-D barotropic, 3-D hydrostatic multilayer, non-hydrostatic \cplx{(VERY BETA / structured)}
+          \item Well-balanced wet/dry, tides, nesting (beta), sponges
+          \item Opt-in \textbf{semi-implicit} free surface --- no gravity-wave CFL
+        \end{itemize}
+      \end{block}
+    \column{.49\textwidth}
+      \begin{block}{Ocean --- regional dynamical core}
+        \begin{itemize}
+          \item Arakawa C-grid, split-explicit RK2
+          \item Wright nonlinear EOS \textperiodcentered\ GVC
+          \item Vertical mixing: KPP, EPBL, kappa-shear
+          \item Mesoscale: GM / Redi / MEKE / Fox-Kemper
+        \end{itemize}
+      \end{block}
+      \begin{block}{Coming soon}
+          \begin{itemize}
+              \item Sea ice
+          \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{.3em}
+  \centering\footnotesize River \textperiodcentered\ estuary \textperiodcentered\ harbour \quad$\longrightarrow$\quad basin-scale eddying ocean.
+\end{frame}
+
+\begin{frame}{Rakali: one source, every device}{Portable across CPU/GPU}
+  \begin{columns}[T,onlytextwidth]
+    \column{.53\textwidth}
+      \begin{itemize}
+        \item \texttt{do concurrent} for compute; \texttt{!\$acc} only for reductions \& data movement.
+        \item CI + linter keep every OpenACC directive portable to OpenMP (AMD / Intel).
+        \item MPI multi-GPU with \textbf{CUDA-aware} (GPU-direct) halo exchange.
+        \item 281+ unit tests suites 
+      \end{itemize}
+    \column{.44\textwidth}
+      \begin{block}{Measured \cplx{(single V100 unless noted)}}
+        \footnotesize
+        \begin{itemize}\setlength\itemsep{1pt}
+          \item Coastal 2-D: \textbf{$\sim$0.7\,Bcell/s} $\to$ \textbf{$\sim$1.9\,Bcell/s} on 4 GPUs.
+          \item Coastal 3-D multilayer: \textbf{$\sim$340\,Mcell/s}.
+          \item Tasman 2\,km: \textbf{$\sim$34\,s} / day.
+          \item CPU code competitive with MOM6
+        \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{.2em}
+  \centering\footnotesize Written \emph{from scratch} in Fortran --- and a proving ground for AI-assisted development.
+\end{frame}
+
+\begin{frame}{Why Rakali?}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \begin{itemize}
+        \item Performance optimization.
+        \item Explore different algorithmic schemes and pathways without bothering anyone.
+        \item Simpler build and deployment.
+        \item Simpler portability across vendors --- more control over what gets built.
+      \end{itemize}
+    \column{.48\textwidth}
+      \begin{itemize}
+        \item I can break things and no one but me cares.
+        \item Designing a code from scratch is extremely fun.
+        \item Testing the limits of AI-assisted code development.
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+\end{document}
+

@@ -1,0 +1,4 @@
+call MPI_COMM_RANK( mpp_comm_private, pe,   error )
+call MPI_COMM_SIZE( mpp_comm_private, npes, error )
+!$    call omp_set_default_device (pe)
+!$acc set device_num(pe)

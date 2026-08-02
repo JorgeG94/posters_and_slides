@@ -1,0 +1,84 @@
+\documentclass[border=12pt]{standalone}
+\usepackage[svgnames]{xcolor}
+\usepackage{forest}
+\usetikzlibrary{calc}
+
+% ---- GPU-port status palette ---------------------------------------
+\definecolor{cDone}{HTML}{8FD9A8}  % green : ported & verified
+\definecolor{cWip} {HTML}{F4C95D}  % amber : in progress
+\definecolor{cTodo}{HTML}{E8918C}  % red   : not started
+\definecolor{cRoot}{HTML}{AFC0E8}  % blue  : structural driver
+\definecolor{cEdge}{HTML}{555555}
+
+\forestset{
+  comp/.style={
+    draw=black!65, line width=0.5pt, rounded corners=2pt,
+    minimum height=7mm, inner xsep=5pt, align=center,
+    font=\sffamily\footnotesize\bfseries
+  },
+  root/.style  ={comp, fill=cRoot,     font=\sffamily\small\bfseries},
+  struct/.style={comp, fill=cRoot!55},
+  done/.style  ={comp, fill=cDone},
+  wip/.style   ={comp, fill=cWip},
+  todo/.style  ={comp, fill=cTodo},
+}
+
+\begin{document}
+\begin{forest}
+  for tree={
+    parent anchor=south, child anchor=north, grow=south,
+    edge={draw=cEdge, line width=0.5pt},
+    edge path={\noexpand\path[\forestoption{edge}]
+      (!u.parent anchor) -- +(0,-6pt) -| (.child anchor)\forestoption{edge label};},
+    l sep=8mm, s sep=3mm,
+  }
+  [Model Timestep, root, name=mt
+    [Dynamics, struct
+      [Dycore, done
+        [CoriolisAdv,   done, name=cor]
+        [PressureForce, done]
+        [hor\_visc,     done]
+        [btstep,        done]
+        [continuity,    done]
+        [vertvisc,      done]
+      ]
+      [{Lateral\\Mixing}, wip
+        [{Neutral\\Surfaces}, todo]
+      ]
+      [{Layer\\Diffusion}, todo]
+      [{Bottom\\Drag}, done]
+      [{Mixed\\Layer}, todo]
+    ]
+    [{Thermodynamic\\Step}, struct
+      [Diabatic, wip
+        [ePBL, wip]
+        [Diffusivity, wip
+          [{Kappa\\Shear}, wip]
+          [Convection,     todo]
+        ]
+      ]
+    ]
+    [ALE, wip]
+    [Tracers, done
+      [{Tracer\\advection}, done]
+      [{Tracer\\diffusion}, done]
+    ]
+    [Diagnostics, wip,
+      tikz+={%
+        \begin{scope}[shift={($(cor.west |- mt.north)+(0,4mm)$)}]
+          \foreach \i/\c/\t in {%
+            0/cDone/ported \& verified,
+            1/cWip/in progress,
+            2/cTodo/not started,
+            3/cRoot/structural driver}{%
+            \node[anchor=north west, draw=black!65, rounded corners=1pt,
+                  fill=\c, minimum width=6mm, minimum height=3.4mm]
+                  (lg\i) at (0,-\i*4.8mm) {};
+            \node[anchor=west, font=\sffamily\scriptsize\bfseries]
+                  at ([xshift=1.5mm]lg\i.east) {\t};
+          }
+        \end{scope}}
+    ]
+  ]
+\end{forest}
+\end{document}
