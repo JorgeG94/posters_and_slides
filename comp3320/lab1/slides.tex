@@ -1,0 +1,281 @@
+% =====================================================================
+%  COMP3320 2026 -- Lab 1 introduction slides
+%  Source of truth: script.md  (this file is the LaTeX translation)
+%  Theme: cookie (LuaLaTeX-first).  Build with:  latexmk slides.tex
+% =====================================================================
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% Logos etc. live in the shared template assets; add local assets/ too.
+\graphicspath{{assets/}{../../template/assets/}}
+
+\definecolor{fortranPurple}{HTML}{503874}     % poster deep purple
+\definecolor{fortranPurpleMid}{HTML}{7E5AA6}
+\usetheme[
+  accent=fortranPurple,
+  progressbar=foot,
+  sectionpage=progressbar,
+  subsectionpage=none,
+  numbering=fraction,
+  numberrail=section,
+  block=fill,
+  notes=hide,
+  toc=aftertitle,
+  closing=contact
+]{cookie}
+
+% small muted right-aligned annotation, as in the water deck
+\newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
+
+\title[COMP3320 Lab 1]{How do I time my programs?}
+\subtitle{Timing, scaling \& profiling in scientific HPC}
+\author[COMP3320 2026 \textperiodcentered\ Lab 1]{Jorge Luis Gálvez Vallejo}
+\cookieemail{jorge.galvezvallejo@anu.edu.au}
+\institute{School of Computing}
+\cookieuni{Australian National University}
+\cookielocation{Canberra, Australia}
+\date{Week 2, 2026}
+\cookietagline{COMP3320 \textperiodcentered\ Lab 1 \textperiodcentered\ Week 2}
+
+\cookieclosingtitle{}
+\cookieclosingtext{Fork, clone, \texttt{make}, and run.}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\section{Intro to scientific HPC}
+
+\begin{frame}{Why should you care about HPC?}{It is the engine room of modern science and industry}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \textbf{Computational Fluid Dynamics}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item Aerospace --- Boeing, Lockheed, Airbus
+        \item Cars --- F1, NASCAR
+        \item Materials --- wind turbines, buildings
+        \item Climate --- atmospheric \& oceanic physics
+      \end{itemize}
+      \smallskip
+      \textbf{Computational Physics}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item Astro --- NASA, ESA, JPL
+        \item High-energy --- nuclear, CERN, plasma
+      \end{itemize}
+      \smallskip
+      \textbf{Computational Chemistry}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item Drug design, molecular dynamics --- big pharma
+        \item Catalysts, materials --- energy, plastics
+      \end{itemize}
+
+    \column{.5\textwidth}
+      \textbf{Software design \& optimization}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item HP-libraries --- NVIDIA, Intel, AMD, Cray
+        \item Compilers --- Arm, NVIDIA, Intel, AMD, Cray
+        \item Applied research, ML --- \emph{everywhere now}
+      \end{itemize}
+      \smallskip
+      \textbf{Research \& collaboration}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item National labs all over the world
+        \item HPC centres around the world
+      \end{itemize}
+      \vfill
+
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{How do I time my programs?}
+
+\begin{frame}{Timers: two properties that matter}
+  When you call a timing routine, ask two questions:
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item \textbf{Resolution} --- how \emph{finely} can time be measured?
+      \\ \cplx{milliseconds? microseconds? nanoseconds?}
+    \item \textbf{Overhead} --- how long does it take to \emph{call} the timing
+      function itself?
+  \end{itemize}
+  \bigskip
+  \begin{block}{How you find out}
+    Make repeated calls to the timer and look at the numbers it gives back.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{A timing loop --- what is it really measuring?}
+  \begin{cookiecode}[title={the classic pattern}]{C}
+double measure_time();
+double elapsed_time(start, end);
+
+for (int i = 0; i < ni; i++) {
+  for (int j = 0; j < nj; j++) {
+    for (int k = 0; k < nk; k++) {
+      double t0 = measure_time();
+      {
+        do_ops(i, j, k);
+      }
+      double t1 = measure_time();
+      double dt = elapsed_time(t0, t1);
+      printf(" took = %f \n", dt);
+    }
+  }
+}
+  \end{cookiecode}
+\end{frame}
+
+\begin{frame}{Timing}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item The previous program is a 3-fold loop: \texttt{measure\_time} is called
+      $n_i \times n_j \times n_k$ times.
+    \item If \texttt{do\_ops(i,j,k)} takes ${\sim}1\,\text{ms}$ \textbf{and the
+      timing routine has a similar overhead}\ldots
+  \end{itemize}
+  \bigskip
+  \begin{cookiequote}
+    What are you then measuring?
+  \end{cookiequote}
+  \bigskip
+  \cplx{How accurate is the \texttt{measure\_time} routine in the first place?}
+\end{frame}
+
+\begin{frame}{Resolution}
+  \begin{itemize}\setlength\itemsep{8pt}
+    \item If my clock can only measure \textbf{milliseconds} accurately, what
+      happens when my routines take \textbf{microseconds}?
+      \\ \cplx{the clock reports 0, or noise}
+    \item Timing routines vary across \textbf{languages, libraries, and operating
+      systems}.
+  \end{itemize}
+  \bigskip
+  \begin{block}{Rule of thumb}
+    Match the clock to the thing you are timing.
+  \end{block}
+\end{frame}
+
+% =====================================================================
+\section{Benchmarking \& profiling}
+
+\begin{frame}{Benchmarking and appropriate timing routines}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \textbf{Benchmarking} --- time it from the outside
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item If you are timing wrong, you are \emph{not} benchmarking properly.
+        \item Proper benchmarking relies on a \textbf{good clock} used correctly.
+      \end{itemize}
+    \column{.5\textwidth}
+      \textbf{Profiling} --- look inside the running program
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Instrument the code at the \textbf{binary level} to extract information.
+        \item Use instruction- and runtime-analysis for precise measurements.
+        \item Tells you \emph{where} the time actually goes --- often somewhere surprising.
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Lab 1: iterative non-linear solvers}
+
+\begin{frame}{The program you will study: the Bratu problem}
+  A \emph{nonlinear} PDE, the \textbf{Liouville--Bratu--Gelfand equation}:
+  \[
+    -\nabla^2 u = \lambda\, e^{u}
+  \]
+  \begin{itemize}\setlength\itemsep{4pt}
+    \item Solved on the unit square, with $u = 0$ on the boundary\ldots
+    \item \ldots discretised onto an $n \times n$ grid.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Where does this equation come from?}{Optional colour --- it makes $\lambda$ less mysterious}
+  A classic model of \textbf{thermal self-ignition} --- a balance of two terms:
+  \begin{itemize}\setlength\itemsep{4pt}
+    \item $-\nabla^2 u$: how fast heat \textbf{conducts away}.
+    \item $e^{u}$: how fast heat is \textbf{generated}
+      --- hotter $\Rightarrow$ reacts faster $\Rightarrow$ a feedback loop.
+    \item $\lambda$ sets generation vs.\ conduction.
+  \end{itemize}
+  \bigskip
+  \begin{alertblock}{The interesting physics}
+    Above a critical $\lambda^{*} \approx 6.808$ \textbf{no steady state exists} ---
+    the material cannot shed heat fast enough and it ignites.
+    We fix $\lambda = 3.0$, safely below critical, so a solution exists.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{How the code solves it}{You do not need the details --- just appreciate the shape}
+  \begin{itemize}\setlength\itemsep{3pt}
+    \item Nonlinear $\Rightarrow$ we cannot solve it in one step like $Ax = b$.
+    \item Repeatedly apply a fixed-point map $u \leftarrow G(u)$ (one grid sweep),
+      accelerated by \textbf{DIIS} (Anderson acceleration).
+  \end{itemize}
+  \medskip
+  \begin{center}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{phase} & \textbf{what it does} \\
+      \midrule
+      \texttt{map (G)}     & one sweep of the grid \\
+      \texttt{error vec}   & forms $e = G(x) - x$ \\
+      \texttt{B matrix}    & dot products of stored error vectors \\
+      \texttt{small solve} & tiny dense solve for the DIIS coefficients \\
+      \texttt{extrapolate} & combines history into the next iterate \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  \medskip
+  \cplx{The code reports the time spent in each phase --- that is your raw data.}
+\end{frame}
+
+\begin{frame}{What you'll do today}
+  \begin{enumerate}\setlength\itemsep{6pt}
+    \item \textbf{Timer resolution \& overhead} --- \texttt{gettimeofday} vs
+      \texttt{clock\_gettime}.
+    \item \textbf{CPU timing \& scaling} --- how does one iteration scale,
+      $\mathcal{O}(n^{k})$? Does a better \emph{algorithm} (DIIS) beat brute force?
+    \item \textbf{Profiling with Intel tools} --- VTune (hotspots) \& Advisor (loops).
+    \item \textbf{Profiling with Linaro Forge} --- a second profiler; see what the
+      \emph{compiler} did.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[standout,noframenumbering]
+  Run the code. 
+\end{frame}
+
+\begin{frame}{The golden rule}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item The compiler and the hardware do things you \textbf{cannot see} by
+      reading \texttt{diis.c}.
+    \item Almost every answer comes from \textbf{measurement on Gadi}, not
+      inspection.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Getting started}
+  \begin{enumerate}\setlength\itemsep{4pt}
+    \item \textbf{Fork} the repo to your own account (as in the pre-lab).
+    \item \textbf{Clone} it on Gadi:
+  \end{enumerate}
+  \begin{cookiecode}[title={clone}]{bash}
+git clone git@gitlab.comp.anu.edu.au:<YOUR_UID>/comp3320-2026-lab-1.git
+  \end{cookiecode}
+  \begin{enumerate}\setlength\itemsep{4pt}\setcounter{enumi}{2}
+    \item \textbf{Build \& run}:
+  \end{enumerate}
+  \begin{cookiecode}[title={build}]{bash}
+make walltime      # Part 1
+make exe_diis      # Parts 2-4
+./exe_diis 64
+  \end{cookiecode}
+\end{frame}
+
+% closing slide is inserted automatically by `closing=contact`
+\end{document}
+
