@@ -1,0 +1,11 @@
+% Preamble (once):
+%   \usepackage[table,svgnames]{xcolor}
+%   \usepackage{booktabs}
+%   \usepackage{tabularx}
+\definecolor{cDone}{HTML}{8FD9A8}
+\definecolor{cWip} {HTML}{F4C95D}
+\definecolor{cTodo}{HTML}{E8918C}
+\newcommand{\yes}[1]{\cellcolor{cDone}#1}
+\newcommand{\prt}[1]{\cellcolor{cWip}#1}
+\newcommand{\nope}[1]{\cellcolor{cTodo}#1}
+

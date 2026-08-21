@@ -1,0 +1,20 @@
+% In the frame:
+{\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}l c c >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Compiler} & \textbf{DC\,$\to$\,CPU} & \textbf{DC\,$\to$\,GPU} & \textbf{Notes / flags} \\
+\midrule
+\texttt{nvfortran} (NVHPC)         & \yes{Yes}   & \yes{Yes}   & most mature; \texttt{-stdpar=gpu}; managed mem; F2023 \texttt{reduce}/locality \\
+\texttt{ifx} (Intel)               & \yes{Yes}   & \yes{Yes}   & DC lowered to OpenMP; \texttt{-fopenmp-target-do-concurrent}; \texttt{ifort} EOL \\
+\texttt{ftn} (Cray CCE)            & \yes{Yes}   & \yes{Yes}   & AMD + NVIDIA, unified mem; \texttt{-h thread\_do\_concurrent} \\
+\texttt{flang}/\texttt{aof} (AOCC) & \yes{Yes}   & \nope{No}   & x86/Zen only; \texttt{-mp}; $\to$ llvm-flang in 6.0 \\
+\texttt{xlf} (IBM XL)              & \yes{Yes}   & \prt{Part.} & POWER+NVLink only; \emph{legacy} (Open XL) \\
+\texttt{frt} (Fujitsu)             & \yes{Yes}   & \nope{No}   & SVE auto-vec; \texttt{-Kparallel}; not DC-aware \\
+\texttt{gfortran} (GCC)            & \prt{Part.} & \nope{No}   & generic autopar \texttt{-ftree-parallelize-loops=N}; not DC-aware \\
+LLVM \texttt{flang}                & \prt{Part.} & \prt{Part.} & emerging; \texttt{-fdo-concurrent-to-openmp=host|device} \\
+\texttt{lfortran}                  & \prt{Part.} & \prt{Part.} & beta; unified mem; not production-ready \\
+\texttt{nagfor} (NAG)              & \nope{No}   & \nope{No}   & serial; correctness oracle, not a perf path \\
+\bottomrule
+\end{tabularx}}

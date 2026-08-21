@@ -1,0 +1,22 @@
+\frametitle{El mismo loop donde sea!}
+\begin{columns}[T,onlytextwidth]
+    \column{.52\textwidth}
+      \begin{cookiecode}[title=Fortran estándar]{Fortran}
+do concurrent (k=1:nk,j=1:nj,i=1:ni)
+  c(i,j,k) = al*a(i,j,k) + b(i,j,k)
+end do
+      \end{cookiecode}
+    \column{.46\textwidth}
+      \begin{cookiecode}[title=El muro de directivas]{Fortran}
+!$omp target teams loop collapse(3)
+do k = 1, nk
+  do j = 1, nj
+    do i = 1, ni
+      c(i,j,k) = alpha*a(i,j,k) + b(i,j,k)
+    end do
+  end do
+end do
+      \end{cookiecode}
+  \end{columns}
+  \vspace{.3em}
+

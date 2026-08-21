@@ -1,0 +1,22 @@
+\frametitle{One loop, every device}
+\begin{columns}[T,onlytextwidth]
+    \column{.52\textwidth}
+      \begin{cookiecode}[title=Standard Fortran]{Fortran}
+do concurrent (k=1:nk,j=1:nj,i=1:ni)
+  c(i,j,k) = al*a(i,j,k) + b(i,j,k)
+end do
+      \end{cookiecode}
+    \column{.46\textwidth}
+      \begin{cookiecode}[title=The directive wall]{Fortran}
+!$omp target teams loop collapse(3)
+do k = 1, nk
+  do j = 1, nj
+    do i = 1, ni
+      c(i,j,k) = alpha*a(i,j,k) + b(i,j,k)
+    end do
+  end do
+end do
+      \end{cookiecode}
+  \end{columns}
+  \vspace{.3em}
+

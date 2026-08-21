@@ -1,0 +1,8 @@
+!$omp target teams loop collapse(3)
+do k = 1, nk
+  do j = 1, nj
+    do i = 1, ni
+      c(i,j,k) = alpha*a(i,j,k) + b(i,j,k)
+    end do
+  end do
+end do
