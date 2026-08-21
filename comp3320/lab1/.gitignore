@@ -1,0 +1,16 @@
+# LaTeX build artifacts (keep .tex, .sty, .md, and the final .pdf)
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+.DS_Store
