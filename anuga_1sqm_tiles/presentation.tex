@@ -147,6 +147,35 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Scales}{Not every tile needs 1\,m$^2$}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item Each tile gets its own maximum area from a map (the coarse run's wetness); areas nest as $A \cdot 4^k$ so lattice spacings nest as $s \cdot 2^k$
+        \item A shared cut line carries the \textbf{finer} lattice --- both tiles compute the same points, so they still conform; Triangle grades into the coarse side
+        \item Delta test: 1024 / 256 / 64\,m$^2$ $\Rightarrow$ 20M triangles instead of 355M uniform; bit-exact tiled vs merged
+        \item Ganges-scale: 2\,M\,km$^2$ is $\sim$3\,T triangles at 1\,m$^2$; with 5\,\% at 1\,m$^2$, 25\,\% at 25, the rest coarse: $\sim$185\,G
+      \end{itemize}
+      \muted{Time step: set by triangles at outline/cut-line corners, not by the transitions --- keeping lattice points half a spacing from corners gave 1.38$\times$ on $\Delta t$.}
+    \column{.48\textwidth}
+      \includegraphics[width=\textwidth]{figs/fig9_multiscale_transition.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Corners}{Where the time step is set}
+  \begin{columns}[T,onlytextwidth]
+    \column{.44\textwidth}
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item ANUGA's $\Delta t = \min(\text{inradius} / \text{speed})$ over wet cells: the smallest triangle on the wet edge decides everything
+        \item The smallest triangles were not in the resolution transitions --- they were at \textbf{outline / cut-line corners}: intersection points millimetres from an outline vertex, and lattice points a few metres from a corner, which Triangle's 28$^\circ$ rule fills with slivers
+        \item Rule: no inserted point within $0.5\,s$ of a segment endpoint, no outline vertex within $s$ of a corner's cut line --- symmetric on both sides, so tiles still conform
+        \item Same mesh: $\Delta t$ 0.032 $\to$ 0.045\,s (1.38$\times$); the lake now has one triangle below half the median inradius out of 3.25\,M
+      \end{itemize}
+    \column{.54\textwidth}
+      \includegraphics[width=\textwidth]{figs/fig11_corner.png}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Tiles}{1441 tiles after refinement; the rehearsal block near the synthetic lake}
   \centering
   \includegraphics[width=.98\textwidth,height=.78\textheight,keepaspectratio]{figs/fig5_tile_map.png}
@@ -183,6 +212,37 @@
 \begin{frame}{Scaling}{C-only MPI across GPUs, slab partition of a generated mesh}
   \centering
   \includegraphics[width=.98\textwidth,height=.74\textheight,keepaspectratio]{figs/fig1_slab_scaling.png}
+\end{frame}
+
+\begin{frame}{Portability}{Same C source, unmodified: nvc, amdclang, icx --- digit-identical physics on all five}
+  \centering
+  \includegraphics[width=.98\textwidth,height=.76\textheight,keepaspectratio]{figs/fig10_portability.png}
+\end{frame}
+
+\begin{frame}{Portability}{Where each device lands, and what the AMD gap is}
+  \begin{columns}[T,onlytextwidth]
+    \column{.56\textwidth}
+      \begin{tabular}{@{}lrrrr@{}}
+        \toprule
+        device & peak & plateau & HBM & Mc/s per TB/s \\
+        \midrule
+        V100 16 GB      & 656  & $\sim$650  & 0.9 TB/s & $\sim$720 \\
+        A100 80 GB      & 1553 & $\sim$1500 & 2.0 TB/s & $\sim$750 \\
+        H200 143 GB     & 2843 & $\sim$2550 & 4.8 TB/s & $\sim$530 \\
+        PVC 64 GB       & 1552 & $\sim$1060 & 1.6 TB/s & $\sim$660 \\
+        MI250X GCD 64 GB& 419  & $\sim$385  & 1.6 TB/s & \textbf{$\sim$240} \\
+        \bottomrule
+      \end{tabular}
+      \muted{Mcell-steps/s, ADER2 + scatter, single device; plateau = large-mesh value. Volume drift $\le 10^{-16}$, zero NaNs, identical max-momentum on every device at all 19 common sizes.}
+    \column{.4\textwidth}
+      \begin{block}{Reading it}
+        \begin{itemize}
+          \item NVIDIA plateaus track bandwidth; the MI250X GCD is the flattest curve measured (no fade to 134.6M)
+          \item Per unit of bandwidth CDNA runs at a third of the others: a 2--3$\times$ target, not a tuning one
+          \item First suspect: the AMD build has no \texttt{-munsafe-fp-atomics}, so the six fp64 atomic adds per edge in the scatter kernel compile to CAS loops
+        \end{itemize}
+      \end{block}
+  \end{columns}
 \end{frame}
 
 % =====================================================================
