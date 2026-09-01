@@ -68,7 +68,7 @@
         halign=center,valign=center,nobeforeafter,box align=center]
       \includegraphics[height=1.05cm]{assets/nci.png}\\[.8em]
       % PLACEHOLDER: second logo -- drop the real file in as assets/logo2.png
-      \includegraphics[height=1.05cm]{assets/logo2.png}
+      \includegraphics[height=1.05cm]{assets/cdac_logo.jpg}
     \end{tcolorbox}%
   \end{tabular}%
 }
@@ -108,9 +108,10 @@
 \section{Tiling}
 
 \begin{frame}{Tiling}{Cutting the polygon so tiles can be meshed independently}
+  \small
   \begin{columns}[T,onlytextwidth]
     \column{.5\textwidth}
-      \begin{enumerate}\setlength\itemsep{4pt}
+      \begin{enumerate}\setlength\itemsep{3pt}
         \item Densify the delta outline to a fixed spacing $s$ \muted{($s = 1.2$\,m at 1\,m$^2$, just under the natural edge length)}
         \item Intersect with a regular grid of 3\,km cells \muted{(64 $\times$ 46, 1404 non-empty)}
         \item Every cut line is rebuilt from \textbf{lattice points}: origin $+\,k\,s$ along the line, from one common origin
@@ -148,30 +149,32 @@
 \end{frame}
 
 \begin{frame}{Scales}{Not every tile needs 1\,m$^2$}
+  \footnotesize
   \begin{columns}[T,onlytextwidth]
-    \column{.5\textwidth}
-      \begin{itemize}\setlength\itemsep{4pt}
+    \column{.52\textwidth}
+      \begin{itemize}\setlength\itemsep{2pt}
         \item Each tile gets its own maximum area from a map (the coarse run's wetness); areas nest as $A \cdot 4^k$ so lattice spacings nest as $s \cdot 2^k$
-        \item A shared cut line carries the \textbf{finer} lattice --- both tiles compute the same points, so they still conform; Triangle grades into the coarse side
+        \item A shared cut line carries the \textbf{finer} lattice --- both tiles compute the same points, so they conform; Triangle grades into the coarse side
         \item Delta test: 1024 / 256 / 64\,m$^2$ $\Rightarrow$ 20M triangles instead of 355M uniform; bit-exact tiled vs merged
-        \item Ganges-scale: 2\,M\,km$^2$ is $\sim$3\,T triangles at 1\,m$^2$; with 5\,\% at 1\,m$^2$, 25\,\% at 25, the rest coarse: $\sim$185\,G
+        \item Ganges-scale: 2\,M\,km$^2$ is $\sim$3\,T triangles at 1\,m$^2$; at 5\,\% fine, 25\,\% at 25\,m$^2$, rest coarse: $\sim$185\,G
       \end{itemize}
-      \muted{Time step: set by triangles at outline/cut-line corners, not by the transitions --- keeping lattice points half a spacing from corners gave 1.38$\times$ on $\Delta t$.}
-    \column{.48\textwidth}
+      \muted{Time step: set by triangles at outline/cut-line corners, not by the transitions --- lattice points half a spacing from corners gave 1.38$\times$ on $\Delta t$.}
+    \column{.44\textwidth}
       \includegraphics[width=\textwidth]{figs/fig9_multiscale_transition.png}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Corners}{Where the time step is set}
+  \footnotesize
   \begin{columns}[T,onlytextwidth]
-    \column{.44\textwidth}
-      \begin{itemize}\setlength\itemsep{4pt}
-        \item ANUGA's $\Delta t = \min(\text{inradius} / \text{speed})$ over wet cells: the smallest triangle on the wet edge decides everything
-        \item The smallest triangles were not in the resolution transitions --- they were at \textbf{outline / cut-line corners}: intersection points millimetres from an outline vertex, and lattice points a few metres from a corner, which Triangle's 28$^\circ$ rule fills with slivers
-        \item Rule: no inserted point within $0.5\,s$ of a segment endpoint, no outline vertex within $s$ of a corner's cut line --- symmetric on both sides, so tiles still conform
-        \item Same mesh: $\Delta t$ 0.032 $\to$ 0.045\,s (1.38$\times$); the lake now has one triangle below half the median inradius out of 3.25\,M
+    \column{.56\textwidth}
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item ANUGA's $\Delta t = \min(\text{inradius} / \text{speed})$ over wet cells: the smallest wet triangle decides everything
+        \item The smallest triangles were not in the resolution transitions --- they were at \textbf{outline / cut-line corners}: intersections millimetres from an outline vertex, lattice points metres from a corner; Triangle's 28$^\circ$ rule fills those with slivers
+        \item Rule: no inserted point within $0.5\,s$ of a segment endpoint, no outline vertex within $s$ of a corner's cut line --- symmetric, so tiles conform
+        \item Same mesh: $\Delta t$ 0.032 $\to$ 0.045\,s (1.38$\times$); one triangle in 3.25\,M below half the median inradius
       \end{itemize}
-    \column{.54\textwidth}
+    \column{.4\textwidth}
       \includegraphics[width=\textwidth]{figs/fig11_corner.png}
   \end{columns}
 \end{frame}
@@ -222,19 +225,22 @@
 \begin{frame}{Portability}{Where each device lands, and what the AMD gap is}
   \begin{columns}[T,onlytextwidth]
     \column{.56\textwidth}
+      \footnotesize
+      \setlength{\tabcolsep}{4pt}
       \begin{tabular}{@{}lrrrr@{}}
         \toprule
-        device & peak & plateau & HBM & Mc/s per TB/s \\
+        device & peak & plateau & HBM & per TB/s \\
         \midrule
-        V100 16 GB      & 656  & $\sim$650  & 0.9 TB/s & $\sim$720 \\
-        A100 80 GB      & 1553 & $\sim$1500 & 2.0 TB/s & $\sim$750 \\
-        H200 143 GB     & 2843 & $\sim$2550 & 4.8 TB/s & $\sim$530 \\
-        PVC 64 GB       & 1552 & $\sim$1060 & 1.6 TB/s & $\sim$660 \\
-        MI250X GCD 64 GB& 419  & $\sim$385  & 1.6 TB/s & \textbf{$\sim$240} \\
+        V100 16 GB      & 656  & $\sim$650  & 0.9 & $\sim$720 \\
+        A100 80 GB      & 1553 & $\sim$1500 & 2.0 & $\sim$750 \\
+        H200 143 GB     & 2843 & $\sim$2550 & 4.8 & $\sim$530 \\
+        PVC 64 GB       & 1552 & $\sim$1060 & 1.6 & $\sim$660 \\
+        MI250X GCD 64 GB& 419  & $\sim$385  & 1.6 & \textbf{$\sim$240} \\
         \bottomrule
       \end{tabular}
-      \muted{Mcell-steps/s, ADER2 + scatter, single device; plateau = large-mesh value. Volume drift $\le 10^{-16}$, zero NaNs, identical max-momentum on every device at all 19 common sizes.}
+      \muted{Mcell-steps/s, ADER2 + scatter, single device; HBM in TB/s; plateau = large-mesh value. Volume drift $\le 10^{-16}$, zero NaNs, identical max-momentum on every device at all 19 common sizes.}
     \column{.4\textwidth}
+      \footnotesize
       \begin{block}{Reading it}
         \begin{itemize}
           \item NVIDIA plateaus track bandwidth; the MI250X GCD is the flattest curve measured (no fade to 134.6M)
@@ -256,10 +262,11 @@
 \begin{frame}{Weighting}{A cost model measured on the H200}
   \begin{columns}[T,onlytextwidth]
     \column{.46\textwidth}
+      \footnotesize
       \[
         w(\text{tile}) = n_{\text{tri}} \times (\text{active fraction} + 0.073)
       \]
-      \begin{itemize}\setlength\itemsep{4pt}
+      \begin{itemize}\setlength\itemsep{3pt}
         \item 0.073\,ns per cell of never-skipped work, 1.0\,ns per active cell
         \item Active fraction per tile from a coarse run
         \item Contiguous split in Morton order; split tiles above a quarter of a rank's share
@@ -311,21 +318,22 @@
 \end{frame}
 
 \begin{frame}{Data}{Gridded inputs onto 17 billion triangles}
+  \footnotesize
   \begin{columns}[T,onlytextwidth]
-    \column{.5\textwidth}
+    \column{.56\textwidth}
       \begin{block}{Expensive: the fit}
-        \texttt{set\_quantity(filename, alpha)} is a least-squares fit with smoothing --- a sparse solve over the mesh. At 8.7\,G vertices it cannot run, and at 1\,m$^2$ it can only blur the 1\,m LiDAR.
+        \texttt{set\_quantity(filename, alpha)} is a least-squares fit with smoothing --- a sparse solve over the mesh. At 8.7\,G vertices it cannot run; at 1\,m$^2$ it only blurs the 1\,m LiDAR.
       \end{block}
       \begin{block}{Cheap: sampling per tile}
         \begin{itemize}
-          \item Elevation: read the raster window of a tile (9\,M cells, 36\,MB), bilinear-sample its 7\,M vertices --- 1--2\,s per tile, the same job shape as conversion (18 min / 104 cores)
+          \item Elevation: read a tile's raster window (9\,M cells, 36\,MB), bilinear-sample its 7\,M vertices --- 1--2\,s per tile, same job shape as conversion
           \item Friction: nearest cell per centroid
-          \item Rain: cell index per centroid stored once; each 3-hourly update is a gather on the GPU, milliseconds
+          \item Rain: cell index per centroid stored once; each 3-hourly update is a GPU gather, milliseconds
         \end{itemize}
       \end{block}
-    \column{.46\textwidth}
+    \column{.4\textwidth}
       \begin{block}{Unstructured sources}
-        A hot start from a coarse \texttt{.sww}: do not search 17\,G points in the coarse mesh --- rasterise the coarse result once, then sample.
+        A hot start from a coarse \texttt{.sww}: do not search 17\,G points in the coarse mesh --- rasterise it once, then sample.
       \end{block}
       \begin{block}{Rule}
         Gridded inputs are sampled per tile. Unstructured inputs are rasterised once. Nothing is fitted on the fine mesh.
