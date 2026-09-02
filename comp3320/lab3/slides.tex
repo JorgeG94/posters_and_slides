@@ -1,13 +1,8 @@
 % =====================================================================
-%  COMP3320 2026 -- Lab 3 interactive guide slides
+%  COMP3320 2026 -- Lab 3 session slides: SIMD and matrix multiplication
 %  Source of truth: script.md  (this file is the LaTeX translation)
 %  Theme: cookie (LuaLaTeX-first).  Build with:  latexmk slides.tex
 %  (or:  lualatex slides.tex  twice, if latexmk is unavailable)
-%
-%  The deck is the session companion for the lab README: every beat is
-%  predict -> run -> reveal, so most frames carry \pause overlays.
-%  Nothing here spoils a reference number; the reveals are the ones the
-%  README itself states in prose.
 % =====================================================================
 \documentclass[aspectratio=169]{beamer}
 
@@ -15,7 +10,6 @@
 \usepackage{booktabs}
 \usepackage{tabularx}
 
-% Logos etc. live in the shared template assets; add local assets/ too.
 \graphicspath{{assets/}{../../template/assets/}}
 
 \definecolor{fortranPurple}{HTML}{503874}     % course deep purple
@@ -33,391 +27,315 @@
   closing=contact
 ]{cookie}
 
-% small muted right-aligned annotation, as in the lab 1 deck
 \newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
 
-\title[COMP3320 Lab 3]{Programming with SIMD}
-\subtitle{What the vector unit can do that the compiler will not}
+\title[COMP3320 Lab 3]{SIMD and Matrix Multiplication}
+\subtitle{The lecture's kernels, measured with your own hands}
 \author[COMP3320 2026 \textperiodcentered\ Lab 3]{Jorge Luis G\'alvez Vallejo}
 \cookieemail{jorge.galvezvallejo@anu.edu.au}
 \institute{School of Computing}
 \cookieuni{Australian National University}
 \cookielocation{Canberra, Australia}
-\date{Week 4, 2026}
-\cookietagline{COMP3320 \textperiodcentered\ Lab 3 \textperiodcentered\ Week 4}
+\date{Week 6, 2026}
+\cookietagline{COMP3320 \textperiodcentered\ Lab 3 \textperiodcentered\ Week 6}
 
 \cookieclosingtitle{}
-\cookieclosingtext{Predict. Measure. Argue with the result.}
+\cookieclosingtext{Predict. Measure. Check the last bit.}
 
 \begin{document}
 
 \maketitle
 
 % =====================================================================
-\section{The story you have been told}
+\section{From the lectures to the lab}
 
-\begin{frame}{Every optimisation guide says the same thing}
-  \begin{cookiequote}
-    The compiler cannot vectorise \texttt{a[i] = a[i] + b[i]}, because
-    \texttt{a} and \texttt{b} might overlap. Add \texttt{restrict} to promise
-    that they do not, and it will vectorise.
-  \end{cookiequote}
+\begin{frame}{Three claims from the lectures, all testable today}
+  \begin{enumerate}\setlength\itemsep{8pt}
+    \item The compiler \textbf{auto-vectorises} simple loops. \cplx{(week 4, lecture 1)}
+    \item The \textbf{Vector Class Library} lets you write SIMD by hand,
+      without intrinsics. \cplx{(week 4, lecture 2)}
+    \item The naive matrix multiply runs at \textbf{1--2\% of peak}.
+      \cplx{(week 5, lecture 1)}
+  \end{enumerate}
   \bigskip
-  \pause
-  This lab \textbf{tests} that claim instead of believing it.
-  \begin{itemize}\setlength\itemsep{4pt}
-    \item<3-> It is \textbf{largely false} on a modern compiler.
-    \item<4-> The loop that genuinely refuses does so for a reason that is
-      \textbf{invisible in the source}.
-    \item<5-> The vector unit \emph{can} do conditional work --- the hardware has
-      existed since 2016 --- but \textbf{C has no way to say so}.
-      So the compiler cannot use it, and you have to.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{By hand no longer means intrinsics}
-  This lab uses the \textbf{Vector Class Library} (VCL), vendored in the repo ---
-  nothing to download, nothing to \texttt{module load}.
-  \medskip
-  \begin{itemize}\setlength\itemsep{4pt}
-    \item Same instructions as intrinsics --- you will \emph{check} that in Q11.
-    \item Readable: \texttt{a + b} and \texttt{select(mask, x, y)},
-      not \texttt{\_mm512\_mask\_mov\_pd}.
-    \item Portable: the same source compiles for SSE2, AVX2 or AVX-512,
-      and \emph{degrades} to narrower vectors instead of failing to build.
-  \end{itemize}
-  \bigskip
-  \begin{block}{The problem, all lab long}
-    A \textbf{dam break}: a wall is removed, a wave runs over dry ground.
-    The wet/dry front \emph{moves} --- so the inner loop has a branch whose
-    outcome genuinely changes as the simulation runs.
+  \begin{block}{The whole lab is one problem}
+    $C = A \times B$, square, doubles - the lecture's kernels, verbatim.
+    The harness times any variant, prints
+    $\text{GFLOP/s} = 2n^{3}/\text{walltime}$, and compares
+    \textbf{every element} of the answer.
   \end{block}
-\end{frame}
-
-\begin{frame}{How to use the lab}
-  \textbf{Longer than the session, and none of it is marked.} Both deliberate.
   \medskip
-  \begin{columns}[T,onlytextwidth]
-    \column{.48\textwidth}
-      \begin{cookiecard}[title={In the session (core path)}]
-        Questions \textbf{1, 2, 3, 5, 7, 9, 10, 17}.\\[2pt]
-        \cplx{Predict, catch the folklore, measure the three routes, choose
-        one, look back.}
-      \end{cookiecard}
-    \column{.48\textwidth}
-      \begin{cookiecard}[title={In your own time}]
-        \textbf{Q13 first} --- the harness checks your kernel bit for bit.\\
-        Then \textbf{Q11}, the deepest question.\\[2pt]
-        \cplx{\emph{Extension.} = drop if short of time. Part 5 is optional
-        --- and the closest thing here to the actual job.}
-      \end{cookiecard}
-  \end{columns}
-  \bigskip
-  \pause
-  Several of the answers ahead are \textbf{not what you expect} --- that is why
-  this is worth doing with a demonstrator in the room to argue with.
+  Questions 1--7 fit the session; 8 is an extension.
+  \textbf{Question 5 - write the kernel - is the centrepiece}, and the
+  harness checks it bit for bit, so you will know yourself if it is right.
 \end{frame}
 
 % =====================================================================
-\section{Setup: three traps before you start}
+\section{Setup}
 
-\begin{frame}[fragile]{Trap 1: get a compute node, and do not waste it}
-  A login node once gave \texttt{9.28 3.30 8.57 9.28 8.56} ns/element for the
-  \emph{same command}.
-  \begin{cookiecode}[title={ask for this}]{bash}
+\begin{frame}[fragile]{Setup, or nothing below will build}
+  \begin{cookiecode}[title={get a node (why 4\,GB: Gadi charges max(cpus, mem/4GB) - 16GB costs 4x)}]{bash}
 qsub -I -q normal -l ncpus=1,mem=4GB,walltime=2:00:00,storage=scratch/$PROJECT -P $PROJECT
   \end{cookiecode}
-  \pause
-  \begin{itemize}\setlength\itemsep{3pt}
-    \item \textbf{Why 4\,GB?} Gadi charges the larger of CPUs and memory, one
-      charged CPU per 4\,GB --- \texttt{mem=16GB} costs \textbf{4$\times$} for
-      identical work. The whole lab is ${\sim}2$ SU/hour.
-    \item \textbf{The wrong node fails \emph{silently}.} VCL emulates
-      \texttt{Vec8d} on Broadwell: everything builds and runs --- and none of
-      your numbers mean anything.
-  \end{itemize}
-  \begin{cookiecode}[title={check when you land (and Q1 makes you print INSTRSET)}]{bash}
-lscpu | grep -oE 'avx512[a-z0-9_]*' | sort -u
-  \end{cookiecode}
-\end{frame}
-
-\begin{frame}[fragile]{Trap 2: the environment}
-  \begin{cookiecode}[title={not optional --- the lab will not build without this}]{bash}
+  \medskip
+  \begin{cookiecode}[title={fix the environment (make refuses to build until you do)}]{bash}
 module load gcc/15.1.0
-module unload nvidia-hpc-sdk
 unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
   \end{cookiecode}
   \medskip
-  \begin{itemize}\setlength\itemsep{4pt}
-    \item nvidia-hpc-sdk ships its own \texttt{x86intrin.h}; VCL includes it;
-      the build dies in \textbf{hundreds of lines from inside \texttt{/apps/}}
-      that never mention your code. \texttt{make} checks and refuses to start.
-    \item The system gcc is from \textbf{2018}. Every reference number assumes
-      15.1.0, and several answers genuinely differ between the two.
-      \\ \cplx{Questions 5 and 6 go back to the old compiler on purpose --- and
-      say so.}
-  \end{itemize}
+  \cplx{Anything on those include paths that carries its own
+  \texttt{x86intrin.h} shadows the compiler's, and VCL will not build through
+  it; nothing here needs those paths. The system gcc is from 2018.}
 \end{frame}
 
-\begin{frame}[fragile]{Trap 3: pin every timing run}
-  \begin{cookiecode}[title={define pin() once --- every timing command uses it}]{bash}
+\begin{frame}[fragile]{Pin every timing run}
+  \begin{cookiecode}[title={define pin() once, put it in front of every timing command}]{bash}
 pin() {
     local cpu=$(awk '/Cpus_allowed_list/{split($2,a,",");
                      split(a[1],b,"-");print b[1]}' /proc/self/status)
     numactl --localalloc --physcpubind=$cpu "$@"
 }
   \end{cookiecode}
-  \cplx{Binds to the first CPU your job actually owns, memory on that socket.}
   \medskip
+  \begin{itemize}\setlength\itemsep{4pt}
+    \item Unpinned, these measurements vary by \textbf{3$\times$} run to run.
+    \item Even pinned, run everything more than once - two numbers inside
+      your own scatter are \emph{the same number}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Q1: the wrong node is a \emph{silent} failure}
+  \texttt{-march=native} decides whether a \texttt{Vec8d} is one real 512-bit
+  register or an emulation out of two \texttt{Vec4d}. Both \textbf{build and
+  run and give the same answer} - only the numbers stop meaning anything.
+  \begin{cookiecode}[title={check when you land}]{bash}
+lscpu | grep -oE 'avx512[a-z0-9_]*' | sort -u   # prints nothing = wrong node
+./instrset_probe                                # Q1: INSTRSET = ?
+  \end{cookiecode}
   \pause
   \begin{itemize}\setlength\itemsep{4pt}
-    \item Unpinned, these measurements varied by \textbf{3$\times$} --- not
-      noisy, \emph{wrong}, and wrong in the wrong direction.
-    \item Even pinned: run everything more than once and \textbf{know your own
-      scatter}. Two numbers inside it are \emph{the same number} --- and ``I
-      could not resolve this'' is a correct, complete answer.
+    \item \texttt{INSTRSET} is the one number VCL derives from the compiler
+      flags - look yours up in \texttt{vectorclass/instrset.h}.
+    \item \texttt{sizeof(Vec8d)} is 64 bytes \emph{either way}: the type does
+      not change on a narrower machine, only the instructions under it.
   \end{itemize}
 \end{frame}
 
 % =====================================================================
-\section{Part 1: the vocabulary}
+\section{What the compiler does on its own}
 
-\begin{frame}[fragile]{Eight velocities at once --- but only in the wet cells}
-  \begin{cookiecode}[title={intrinsics: correct, fast, unreadable, AVX-512 only}]{C}
-__mmask8 wet = _mm512_cmp_pd_mask(hL, dry, _CMP_GT_OQ);
-__m512d  uL  = _mm512_maskz_div_pd(wet, huL, hL);
-  \end{cookiecode}
-  \pause
-  \begin{cookiecode}[title={the same two lines in VCL}]{C++}
-Vec8db wet = hL > H_DRY;
-Vec8d  uL  = select(wet, huL / hL, 0.0);
-  \end{cookiecode}
-  \pause
-  \begin{block}{A boolean vector is the whole idea}
-    A comparison on \texttt{Vec8d} gives \textbf{eight bools} in a hardware mask
-    register; \texttt{select} takes each lane from one side or the other.
-    That pair is how a vector unit does conditional work --- and C cannot
-    write it. That sentence is the reason this lab exists.
-  \end{block}
+\begin{frame}[fragile]{Q2 - two kernels, one poll: which inner loop vectorises?}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{cookiecode}[title={naive: inner loop is a reduction}]{C}
+for (i...)
+  for (j...) {
+    double sum = 0.0;
+    for (k...)
+      sum += A[i*n+k] * B[k*n+j];
+    C[i*n+j] = sum;
+  }
+      \end{cookiecode}
+    \column{.48\textwidth}
+      \begin{cookiecode}[title={flip-k: inner loop is n independent updates}]{C}
+memset(C, 0, ...);
+for (k...)
+  for (i...)
+    for (j...)
+      C[i*n+j] +=
+        A[i*n+k] * B[k*n+j];
+      \end{cookiecode}
+  \end{columns}
+  \medskip
+  Commit to an answer, then \texttt{make vecreport}.
 \end{frame}
 
-\begin{frame}{Two operations to respect now, because they bite later}
-  \begin{itemize}\setlength\itemsep{10pt}
-    \item \texttt{load\_partial(m, p)} --- loads $m$ elements,
-      \textbf{zeroes the rest}. The library's answer to a loop tail.
-      \\ \cplx{Only harmless if zero is a harmless input to what you compute.
-      Q13c asks exactly when the zero fill \emph{lies}.}
-    \item \texttt{horizontal\_max(a)} --- eight lanes $\to$ one scalar.
-      The only listed operation that is \textbf{not} one instruction per lane:
-      a sequence of shuffles and maxes.
-      \\ \cplx{Where you put it decides whether your loop is fast.
-      That is the whole of Q13.}
+\begin{frame}{Q2, the reveal: both - and that is not the interesting part}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item gcc 15 vectorises even the reduction, \emph{in order} - it has
+      learned to keep your summation order and vectorise anyway.
+    \item The tell is the \textbf{widths}. The report says ``16 byte
+      vectors'', ``32 byte vectors'' - and the lecture's decoder is
+      16 = SSE, 32 = AVX, \textbf{64 = AVX-512}.
   \end{itemize}
   \bigskip
-  Everything else you need --- loads, stores, arithmetic, \texttt{select},
-  \texttt{if\_add}, horizontal reductions --- is one table in the README.
+  \begin{block}{This machine has 512-bit registers. Nothing got 64 bytes.}
+    Hold that thought until question 6.
+  \end{block}
 \end{frame}
 
-\begin{frame}[standout,noframenumbering]
-  Question 2: read the four variants,\\ then \textbf{write your prediction down}.\\[8pt]
-  {\normalsize How much faster will the hand-written variant 2 be, and why?\\
-  Question 17 collects this debt --- show a demonstrator now.}
-\end{frame}
-
-% =====================================================================
-\section{Part 2: the folklore}
-
-\begin{frame}[fragile]{Poll: will gcc \texttt{-O3} vectorise this?}
-  \begin{cookiecode}[title={compute.c --- no restrict anywhere}]{C}
-void compute(int n, double *a, double *b)
-{
-  for (int i = 0; i < n; i ++) {
-    a[i] = a[i] + b[i];
-  }
-}
+\begin{frame}[fragile]{Q3 - what loop order alone is worth}
+  \begin{cookiecode}[title={measure both}]{bash}
+pin ./exe_mm 1024 0 3      # naive
+pin ./exe_mm 1024 1 3      # flip-k
   \end{cookiecode}
   \medskip
-  Hands up: \textbf{vectorised}, or \textbf{refused because \texttt{a} and
-  \texttt{b} might overlap}?
-  \pause
-  \begin{block}{Don't take a vote's word for it either --- ask the compiler (Q3)}
-    \texttt{-fopt-info-vec} on both files, then sweep
-    \{gcc 8.5, gcc 15.1\} $\times$ \{\texttt{-O2}, \texttt{-O3}\}.
-    In \textbf{three} of the four configurations \texttt{restrict} changes
-    nothing at all. In \textbf{one} it is decisive --- and not the one you
-    would guess.
-  \end{block}
-\end{frame}
-
-\begin{frame}[fragile]{So what does \texttt{restrict} actually decide? (Q5)}
-  The driver calls \texttt{compute(nsize-1, \&a[1], \&a[0])} --- the same array,
-  offset by one. With \texttt{restrict}, that promise is now \textbf{a lie}.
-  \begin{cookiecode}[title={watch it go wrong}]{bash}
-module unload gcc; module load gcc/system
-make -B exe_runcompute exe_runcompute_restrict
-./exe_runcompute_restrict 8      # then try 12
-  \end{cookiecode}
-  \pause
-  The output is right for small inputs, then wrong --- \textbf{in repeating
-  groups}. Poll: what sets the group size?
-  \pause
-  \begin{itemize}\setlength\itemsep{3pt}
-    \item Not \texttt{restrict} itself: the \textbf{width of the instructions}
-      the compiler emitted. \texttt{objdump} shows you which register class.
-    \item No warning, no crash --- a \emph{silently wrong answer}.
-      So: when \emph{should} you use \texttt{restrict}?
-  \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{The loop that refuses anyway (Q6)}
-  \texttt{vecblock.c}: every pointer \texttt{restrict}, three separate
-  allocations, \textbf{no aliasing at all} --- and the report still says
   \begin{center}
-    \texttt{not vectorized: control flow in loop.}
-  \end{center}
-  \pause
-  Poll: variant 1 contains \textbf{no \texttt{if} statement}. Where is the
-  control flow?
-  \pause
-  \begin{block}{The branch you did not write}
-    \texttt{sqrt} is obliged to set \texttt{errno} for a negative argument ---
-    a hidden branch in a maths call. \texttt{-fno-math-errno} removes the
-    obligation, and the loop vectorises.
-  \end{block}
-  \cplx{Q6e: gcc 15 proves the argument non-negative by itself and vectorises
-  anyway --- everything above is a statement about \emph{one compiler, from
-  2018}. What is the shelf life of ``the compiler won't do X''?}
-\end{frame}
-
-% =====================================================================
-\section{Part 3: the measurement}
-
-\begin{frame}[fragile]{Four variants, one answer (Q7)}
-  \begin{cookiecode}[title={back on gcc/15.1.0 first --- then fill the table}]{bash}
-module unload gcc; module load gcc/15.1.0
-make -B exe_swe exe_swe_fast
-pin ./exe_swe 1000000 <variant> 100
-  \end{cookiecode}
-  \begin{center}\small
-    \begin{tabular}{@{}lcccc@{}}
+    \begin{tabular}{@{}lcc@{}}
       \toprule
-      ns per face & 0 scalar \texttt{if} & 1 branchless & 2 VCL & 3 restructured \\
+      & naive & flip-k \\
       \midrule
-      \texttt{exe\_swe}       & ? & ? & ? & ? \\
-      \texttt{exe\_swe\_fast} & ? & ? & ? & ? \\
-      total mass              & \multicolumn{4}{c}{\emph{every digit, both builds}} \\
+      GFLOP/s & ? & ? \\
       \bottomrule
     \end{tabular}
   \end{center}
   \medskip
-  Mass is conserved \emph{exactly} by the scheme --- the printed total is a real
-  correctness check, not a formality.
   \pause
-  \cplx{The \texttt{-ffast-math} build's mass is \emph{closer} to the exact
-  500000. So what, precisely, is still the problem with that flag?}
+  The factor should startle you: \textbf{nobody wrote a line of SIMD.}
+  Explain it with the lecture's stride analysis - which array does the naive
+  inner loop read with \textbf{stride n}, and what does that cost per
+  iteration against a stride-1 walk?
 \end{frame}
 
-\begin{frame}[fragile]{Poll: variants 0 and 1 run in \emph{identical} time. Why? (Q8)}
-  Not similar. Identical, run after run. That is not noise.
+\begin{frame}[fragile]{Q4 - the answer moved and nobody asked it to}
+  The harness says flip-k is \textbf{not bit-identical} to naive -
+  differences around the 13th digit. There is no \texttt{-ffast-math}
+  anywhere in this lab, and both loops add each $C_{ij}$'s $k$ terms in the
+  same order. Where did it come from?
   \pause
-  \begin{cookiecode}[title={ask the binary}]{bash}
-nm exe_swe | grep swe_flux
-objdump -d exe_swe | grep -A2 '<swe_flux_branchless>:'
+  \begin{cookiecode}[title={ask the assembly}]{bash}
+make asm
+awk '/^mm_naive:/,/\t.size/'  matmul.s | grep -cE 'vfmadd'
+awk '/^mm_flip_k:/,/\t.size/' matmul.s | grep -cE 'vfmadd'
   \end{cookiecode}
-  \pause
-  \begin{block}{The compiler folded them into one function}
-    It proved your ``clever branchless rewrite'' equivalent to the plain
-    \texttt{if} and kept one copy. Rewriting a branch by hand and timing both
-    versions in the same binary can be measuring \textbf{nothing at all}.
-  \end{block}
-\end{frame}
-
-\begin{frame}{Three routes to a vectorised flux loop (Q9, Q10)}
-  The refusal is the same string as Q6 --- this time the hidden control flow is
-  a \textbf{conditional divide} (what may a divide do that a multiply cannot?).
-  \medskip
-  \begin{columns}[T,onlytextwidth]
-    \column{.32\textwidth}
-      \begin{cookiecard}[title={write it yourself}]
-        VCL, variant 2. Works. Costs: code you must own, a dependency, and
-        \emph{knowing it matters}.
-      \end{cookiecard}
-    \column{.32\textwidth}
-      \begin{cookiecard}[title={restructure source}]
-        Variant 3: select the \emph{operands}, divide unconditionally.
-        Vectorises --- measure what it buys before you admire it.
-      \end{cookiecard}
-    \column{.32\textwidth}
-      \begin{cookiecard}[title={\texttt{-ffast-math}}]
-        One flag, whole program. You did not ask for the arithmetic to change,
-        and cannot tell where it did.
-      \end{cookiecard}
-  \end{columns}
-  \bigskip
-  \pause
-  \textbf{Which do you ship} in a code whose defining requirement is that the
-  answer does not change?
-\end{frame}
-
-\begin{frame}[fragile]{Q11: eight lanes, nowhere near $8\times$. Why?}
-  First prove VCL gave you the instructions you asked for
-  (\texttt{make asm}: count \texttt{vdivpd}/\texttt{vsqrtpd}, find no
-  \texttt{call}). Then: they are \textbf{not fully pipelined} --- estimate the
-  loop's floor from their throughput, and build the roofline (DRAM ceiling from
-  \texttt{exe\_alias}, peak from FMA units $\times$ width $\times$ clock).
-  \pause
-  \begin{cookiecode}[title={the size sweep --- note what nsteps is doing}]{bash}
-for n in 2000 20000 200000 2000000; do
-    pin ./exe_swe $n 2 $((200000000/n)) | grep ns/face
-done
-  \end{cookiecode}
-  \begin{block}{Hold total work fixed when you sweep}
-    Fix \texttt{nsteps} instead and the small sizes finish before the clock
-    leaves idle --- a ramp-up that looks \emph{exactly} like a cache curve.
+  \begin{block}{Fused multiply-add rounds once, not twice}
+    One kernel's multiply-adds were fused into FMA, the other's mostly were
+    not - and gcc contracts \textbf{by default} (\texttt{-ffp-contract=fast}).
+    Neither answer is wrong; the fused one is the \emph{more} accurate. If the
+    last bit matters to you, you have to say so.
   \end{block}
 \end{frame}
 
 % =====================================================================
-\section{Afterwards, and the real world}
+\section{Write it yourself}
 
-\begin{frame}{Q13: write one yourself --- start here after the session}
-  The CFL reduction $s_{\max} = \max_i\,(|u_i| + \sqrt{g\,h_i}\,)$:
-  $n$ values in, \textbf{one} out. Structurally not the flux loop --- every lane
-  must reach one scalar, and \emph{how} is the whole exercise.
+\begin{frame}{Q5 - the centrepiece: \texttt{mm\_vcl}}
+  Write flip-k again, doing \textbf{eight j's at once} with \texttt{Vec8d}.
+  Everything you need is listed in \texttt{matmul.cpp}:
   \medskip
-  \begin{itemize}\setlength\itemsep{4pt}
-    \item The harness checks your kernel \textbf{bit for bit} --- including
-      $n \not\equiv 0 \pmod 8$ and dry cells. You need nobody to mark it.
-    \item The three classic mistakes are listed in \texttt{maxwave.cpp}.
-      \cplx{Where the horizontal collapse goes; what the tail zeros poison;
-      what a dry cell divides by.}
-    \item Doing it yourself is the point --- the README asks AI assistants not
-      to write this one for you, and the harness knows if they did not listen.
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item broadcast one A element: \texttt{Vec8d a(A[i*n+k]);}
+    \item \texttt{load} 8 of B and C, \texttt{mul\_add(a, b, c)}, \texttt{store}
+    \item the tail, when 8 does not divide n:
+      \texttt{load\_partial} / \texttt{store\_partial}
+      \cplx{(lecture 4-2, ``advice 3'')}
+  \end{itemize}
+  \bigskip
+  \begin{block}{The bar is bit-identical vs \texttt{mm\_flip\_k} - at every n, including 1003}
+    Same fused operations in the same order; vectorising \emph{across} j
+    reorders nobody's sum. The harness pre-fills C with NaN, so forgetting to
+    zero it fails loudly.
+  \end{block}
+  \medskip
+  \cplx{Write it yourself. It is the only SIMD you produce in this course, the
+  harness knows if it is right, and the exam room has no AI in it.}
+\end{frame}
+
+\begin{frame}[fragile]{Q6 - so who vectorised it better, you or gcc?}
+  \begin{cookiecode}[title={look at the registers each of you used}]{bash}
+objdump -d exe_mm | awk '/<mm_flip_k>:/,/ret/' | grep -oE '%[xyz]mm' | sort -u
+objdump -d exe_mm | awk '/<mm_vcl>:/,/ret/'    | grep -oE '%[xyz]mm' | sort -u
+  \end{cookiecode}
+  \pause
+  You are in \texttt{zmm} because you \emph{named the type}; the compiler
+  chose \texttt{ymm} unless told:
+  \begin{cookiecode}[title={the lecture's extra flag}]{bash}
+make exe_mm_wide           # -mprefer-vector-width=512
+pin ./exe_mm_wide 1024 1 3
+  \end{cookiecode}
+  Compare all three: on a loop this simple the honest result is a
+  \textbf{near tie} - so what did hand-writing buy, and what did it cost?
+\end{frame}
+
+\begin{frame}{Q7 - how far up the mountain are you?}
+  Work out this core's peak, then place yourself on it:
+  \[
+    \text{peak} \approx
+    \underbrace{2}_{\text{FMA units}} \times
+    \underbrace{8}_{\text{doubles}} \times
+    \underbrace{2}_{\text{FLOP/FMA}} \times
+    \text{clock} \;\approx\; 100\ \text{GFLOP/s on one core}
+  \]
+  \pause
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item Your best kernel is a \textbf{single-digit percentage} of that -
+      and the gap is not vectorisation; you are already 8 wide.
+    \item It is the \textbf{memory hierarchy}: B gets re-fetched endlessly.
+      Blocking (Q8) is the first bite; a tuned BLAS gets \textbf{$\sim$90\% of
+      peak}, and \texttt{OpenBLAS} is a \texttt{module load} away.
+    \item The lecture's last word stands: \emph{you do not write your own
+      matmul in production}. The other 95\% of the node is \textbf{threads} -
+      that is week 8.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Part 5: the production kernel (optional, and the actual job)}
-  A real HLL Riemann solver from an ocean model, in \textbf{Fortran} --- the
-  same three obstacles.
+% =====================================================================
+\section{Blocking and beyond}
+
+\begin{frame}[fragile]{Q8 (extension) - the lecture's blocked kernel, honestly}
+  \begin{cookiecode}[title={sweep the block size}]{bash}
+for bs in 4 8 16 32 64; do pin ./exe_mm 1024 3 3 $bs; done
+  \end{cookiecode}
+  \medskip
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item Here it lands \textbf{between} naive and flip-k - not on top, as
+      the lecture's plot had it. \texttt{make vecreport} shows why: blocking
+      fixed cache reuse but kept the stride-n reads.
+      \cplx{Analyse $\to$ iterate $\to$ verify - the lecture's own method.}
+    \item The check line: blocked is bit-identical to \emph{neither}
+      reference. You reassociated the sum yourself - no compiler flag
+      required to move an answer.
+    \item ``Can we still do better?'' - read algorithmica's matmul chapter
+      for the rest of the ladder, and note where \textbf{call BLAS} sits.
+  \end{itemize}
+\end{frame}
+
+% =====================================================================
+\section{Narrower numbers}
+
+\begin{frame}[fragile]{Q9 - the other way to get more lanes}
+  Half the bits, twice the lanes. Same kernel, three edits:
+  \texttt{Vec8d}$\to$\texttt{Vec16f}, \texttt{double}$\to$\texttt{float},
+  step 8$\to$16.
+  \begin{cookiecode}[title={the same multiply in four precisions, same inputs}]{bash}
+pin ./exe_prec 1024 3
+  \end{cookiecode}
   \medskip
   \begin{itemize}\setlength\itemsep{4pt}
-    \item \textbf{Q15 first if time is short}: hand-inlining the per-cell helper
-      is everyone's first hypothesis. It changes exactly one of \{time, report\}
-      --- find out which, and what that separates.
-    \item \textbf{Q16 is the deliverable}: one day, answer must not move beyond
-      rounding, other compilers must keep working. Write the case for and
-      against rewriting.
+    \item This is the one place in the lab where you should expect the
+      \textbf{textbook 2x} and actually get it.
+    \item Now read the \emph{other} column. \texttt{exe\_prec} prints
+      $\|C-\text{ref}\|/\|\text{ref}\|$ against a double reference: how many
+      digits did that speed cost you?
   \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Q10 (optional) - ``just use FP16''}
+  The last two rows are half precision, both \textbf{provided}, differing in
+  exactly one thing: the type the sum is accumulated into.
+  \pause
+  \begin{itemize}\setlength\itemsep{4pt}
+    \item That gap is the entire cost of rounding every partial sum back to
+      \textbf{10 mantissa bits}, 1024 times per output element. One of those
+      two rows is shippable; it is the one tensor cores implement.
+    \item And the speed is the surprise:
+  \end{itemize}
+  \begin{cookiecode}[title={check the hardware before you believe a timing}]{bash}
+lscpu | grep -o avx512_fp16 || echo "no native FP16 arithmetic on this node"
+  \end{cookiecode}
+  \cplx{AVX-512-FP16 is Sapphire Rapids and later; Cascade Lake predates it,
+  so gcc keeps binary16 semantics by converting to float and back around
+  every operation - scalar. Both half rows come out \emph{slower than
+  double}.}
   \medskip
-  \begin{cookiequote}
-    ``Here is the bottleneck, here is why, here is the fix, here is what it is
-    worth --- and here is why I am not doing it.''
-  \end{cookiequote}
+  \textbf{Split your answer}: which half is a fact about this hardware, and
+  which is a fact about the format?
 \end{frame}
 
 \begin{frame}[standout,noframenumbering]
-  Question 17:\\ take out your question 2 prediction.\\[8pt]
-  {\normalsize How wrong were you --- and \emph{where}?}
+  \texttt{make}. Run it.\\[8pt]
+  {\normalsize Naive, flip-k, then write yours.\\
+  The harness checks the last bit so nobody has to take your word for it.}
 \end{frame}
 
 % closing slide is inserted automatically by `closing=contact`
