@@ -72,6 +72,26 @@
 % =====================================================================
 \section{Setup}
 
+\begin{frame}[fragile]{First, once per Gadi account: the SU guard}
+  Copy the \texttt{qsub} function from the top of the README into your
+  \texttt{\textasciitilde/.bashrc}. One command, once, ever: it replaces
+  \texttt{qsub} with a wrapper that checks your usage and makes you confirm
+  before anything is submitted.
+  \begin{cookiecode}[title={what you will see from then on}]{bash}
+Used 3.21 SU out of 250 SU
+Have you calculated the expected SU usage of your job?
+Confirm job submission? [y/n]
+  \end{cookiecode}
+  \begin{itemize}\setlength\itemsep{3pt}
+    \item The course has \textbf{25,000 SU} for everyone; \textbf{250 are
+      yours}. \cplx{An SU is Gadi's unit of compute time.}
+    \item Going over takes time from your classmates and \textbf{may cost you
+      marks}.
+    \item This lab is about \textbf{2 SU per hour} - it fits easily, provided
+      you ask for what you need and no more.
+  \end{itemize}
+\end{frame}
+
 \begin{frame}[fragile]{Setup, or nothing below will build}
   \begin{cookiecode}[title={get a node (why 4\,GB: Gadi charges max(cpus, mem/4GB) - 16GB costs 4x)}]{bash}
 qsub -I -q normal -l ncpus=1,mem=4GB,walltime=2:00:00,storage=scratch/$PROJECT -P $PROJECT
