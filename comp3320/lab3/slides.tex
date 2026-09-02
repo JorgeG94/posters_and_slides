@@ -30,7 +30,7 @@
 \newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
 
 \title[COMP3320 Lab 3]{SIMD and Matrix Multiplication}
-\subtitle{The lecture's kernels, measured with your own hands}
+\subtitle{}
 \author[COMP3320 2026 \textperiodcentered\ Lab 3]{Jorge Luis G\'alvez Vallejo}
 \cookieemail{jorge.galvezvallejo@anu.edu.au}
 \institute{School of Computing}
@@ -47,9 +47,9 @@
 \maketitle
 
 % =====================================================================
-\section{From the lectures to the lab}
+\section{Intro}
 
-\begin{frame}{Three claims from the lectures, all testable today}
+\begin{frame}{What we will do}
   \begin{enumerate}\setlength\itemsep{8pt}
     \item The compiler \textbf{auto-vectorises} simple loops. \cplx{(week 4, lecture 1)}
     \item The \textbf{Vector Class Library} lets you write SIMD by hand,
@@ -66,8 +66,7 @@
   \end{block}
   \medskip
   Questions 1--7 fit the session; 8 is an extension.
-  \textbf{Question 5 - write the kernel - is the centrepiece}, and the
-  harness checks it bit for bit, so you will know yourself if it is right.
+  \textbf{Question 5 is the centrepiece}
 \end{frame}
 
 % =====================================================================
@@ -147,7 +146,7 @@ for (k...)
       \end{cookiecode}
   \end{columns}
   \medskip
-  Commit to an answer, then \texttt{make vecreport}.
+  Use \texttt{make vecreport} to verify.
 \end{frame}
 
 \begin{frame}{Q2, the reveal: both - and that is not the interesting part}
@@ -272,7 +271,7 @@ pin ./exe_mm_wide 1024 1 3
 % =====================================================================
 \section{Blocking and beyond}
 
-\begin{frame}[fragile]{Q8 (extension) - the lecture's blocked kernel, honestly}
+\begin{frame}[fragile]{Q8 (extension)}
   \begin{cookiecode}[title={sweep the block size}]{bash}
 for bs in 4 8 16 32 64; do pin ./exe_mm 1024 3 3 $bs; done
   \end{cookiecode}
@@ -332,11 +331,7 @@ lscpu | grep -o avx512_fp16 || echo "no native FP16 arithmetic on this node"
   which is a fact about the format?
 \end{frame}
 
-\begin{frame}[standout,noframenumbering]
-  \texttt{make}. Run it.\\[8pt]
-  {\normalsize Naive, flip-k, then write yours.\\
-  The harness checks the last bit so nobody has to take your word for it.}
-\end{frame}
 
 % closing slide is inserted automatically by `closing=contact`
 \end{document}
+
