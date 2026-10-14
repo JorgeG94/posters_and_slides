@@ -5,7 +5,7 @@
 \usepackage{tabularx}
 \usepackage{colortbl}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,calc}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
 \usepackage[main=english]{babel}
 \usepackage{ragged2e}
 
@@ -38,9 +38,9 @@
 
 \titlegraphic{%
   \begin{tcolorbox}[enhanced,colback=white,colframe=white,boxrule=0pt,
-      arc=5pt,width=3.1cm,left=7pt,right=7pt,top=8pt,bottom=8pt,
+      arc=5pt,width=2.6cm,left=7pt,right=7pt,top=7pt,bottom=7pt,
       halign=center,valign=center,nobeforeafter,box align=center]
-    \includegraphics[height=1.05cm]{assets/nci.png}
+    \includegraphics[height=1.9cm]{assets/fortran-logo.pdf}
   \end{tcolorbox}%
 }
 \cookieclosingtitle{Thank you}
@@ -102,6 +102,104 @@
     At 75 waters/6-31G the stored quartet list cost 26\,s of host time and 11.7\,GB. Binning by type also sorts by class for free.
   \end{alertblock}
   \note{Four ideas carry the design. (1) Every kernel is standard do concurrent; OpenACC only moves data and does atomics. (2) The binned shell-pair container from ECP/libcchem/gmshpc: bin the O(N^2) pair list by angular-momentum type and Schwarz exponent; one launch covers the cross product of two bins and every thread shares (la,lb,lc,ld). (3) Head-Gordon-Pople per class, generated, with direct digestion; Rys quadrature as a second family and the only path for f. (4) Validation against pyscf, libcint and libxc: Fock matrices element-wise to about 1e-12; no test freezes Terco's own output.}
+\end{frame}
+
+\begin{frame}{Binning shell pairs}{Pairs are bucketed once; bin pairs are admitted by an integer test on the host}
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      stp/.style={draw=fortranPurple,line width=.7pt,rounded corners=3pt,fill=white,
+                   align=center,inner sep=4pt,text width=3.2cm},
+      arr/.style={-{Latex[length=2mm]},line width=.8pt,fortranPurple},
+      binbox/.style={draw=fortranPurpleMid,fill=fortranPurple!8,line width=.5pt,
+                     minimum width=3.4cm,minimum height=.42cm,font=\scriptsize}]
+    % ---- left: a pair becomes a bin key ------------------------------------
+    \node[stp] (p)  at (0,2.3) {shell pair $ab$};
+    \node[stp,below=.32cm of p] (q) {$Q_{ab}=\sqrt{\max|(ab|ab)|}$};
+    \node[stp,below=.32cm of q] (s) {$s_{ab}=\mathrm{int}(-\log_{10}Q_{ab})$};
+    \node[stp,below=.32cm of s,fill=fortranPurple,text=white] (k) {bin key $(l_a,l_b,K_{ab},s_{ab})$};
+    \draw[arr] (p)--(q); \draw[arr] (q)--(s); \draw[arr] (s)--(k);
+    \node[cookieMuted,below=.12cm of k,text width=3.6cm,align=center,font=\scriptsize]
+      {type, contraction degree, Schwarz decade: every pair in a bin shares all four};
+    % ---- middle: the admission matrix --------------------------------------
+    \def\cs{.4}
+    \begin{scope}[xshift=3.55cm,yshift=-1.2cm]
+      \foreach \a in {0,...,8}{
+        \foreach \b in {0,...,\a}{
+          \pgfmathtruncatemacro{\sm}{\a+\b}
+          \ifnum\sm>10
+            \fill[cookieLine!60] (\b*\cs,\a*\cs) rectangle ++(\cs,\cs);
+          \else
+            \fill[fortranPurple!55] (\b*\cs,\a*\cs) rectangle ++(\cs,\cs);
+          \fi
+          \draw[white,line width=.4pt] (\b*\cs,\a*\cs) rectangle ++(\cs,\cs);
+        }
+      }
+      \fill[cookieWarm] (2*\cs,5*\cs) rectangle ++(\cs,\cs);
+      \draw[cookieAlert,line width=1.2pt] (3*\cs,9*\cs) -- (3*\cs,8*\cs) -- (4*\cs,8*\cs)
+        -- (4*\cs,7*\cs) -- (5*\cs,7*\cs) -- (5*\cs,6*\cs) -- (6*\cs,6*\cs);
+      \foreach \i in {0,2,4,6,8}{
+        \node[font=\tiny,cookieMuted] at (\i*\cs+.5*\cs,-.22) {\i};
+        \node[font=\tiny,cookieMuted] at (-.22,\i*\cs+.5*\cs) {\i};
+      }
+      \node[font=\scriptsize] at (4.5*\cs,-.6) {ket bucket $s_{cd}$};
+      \node[font=\scriptsize,rotate=90] at (-.62,4.5*\cs) {bra bucket $s_{ab}$};
+      \node[font=\scriptsize] at (4.5*\cs,4.45) {keep $(A,B)$ iff $s_A+s_B\le-\log_{10}\tau$};
+      \node[font=\scriptsize,cookieMuted] at (4.5*\cs,4.1) {$\tau=10^{-10}$, \ $B\le A$};
+      \fill[cookieWarm] (0,-1.05) rectangle ++(.25,.25);
+      \node[anchor=west,font=\scriptsize] at (.3,-.93) {one admitted bin pair = one segment};
+    \end{scope}
+    % ---- right: the launch ------------------------------------------------
+    \begin{scope}[xshift=10.1cm]
+      \node[font=\scriptsize\bfseries] at (0,2.75) {segments, sorted by class};
+      \node[binbox] at (0,2.3)  {(pp$|$ss) \ $|A|\,|B|$ quartets};
+      \node[binbox] at (0,1.84) {(pp$|$ss) \ $|A|\,|B|$ quartets};
+      \node[binbox] at (0,1.38) {(pp$|$ss) \ $|A|(|A|{+}1)/2$ (diag)};
+      \node[binbox,fill=white,draw=cookieLine] at (0,.92) {\textcolor{cookieMuted}{\dots}};
+      \node[stp,text width=3.4cm] (dc) at (0,-.2) {\texttt{do concurrent} over $t$\\ \scriptsize one launch per class};
+      \node[stp,text width=3.4cm,below=.3cm of dc] (bs) {$seg=$ bsearch$(\mathit{sOff},t)$\\$(ab,cd)\leftarrow t-\mathit{sOff}(seg)$};
+      \draw[arr] (0,.7) -- (dc); \draw[arr] (dc) -- (bs);
+    \end{scope}
+  \end{tikzpicture}
+  \vfill
+  {\scriptsize Quartets are never stored: a thread derives its own $(ab,cd)$ from its index. \textcolor{cookieMuted}{Conservative: never admits less than $\tau$ asks.}}
+  \note{The binning, drawn. Each shell pair gets its Schwarz bound Q_ab and a bucket s_ab = int(-log10 Q_ab), and is filed under the key (la, lb, contraction degree, bucket); every pair in a bin shares all four, so a whole bin is homogeneous. Because |(ab|cd)| <= Q_ab Q_cd, a bin pair (A, B) can be admitted or rejected as a whole with an integer test on the two bucket indices, once, on the host: the staircase is s_A + s_B <= 10 at tau = 1e-10. The kernel therefore has no bin-level screening branch. Each admitted bin pair becomes a segment of |A||B| quartets (|A|(|A|+1)/2 on the diagonal); segments are sorted by class and prefix-summed, and each class is one do concurrent launch in which thread t binary-searches the prefix sums for its segment and decodes its own (ab, cd). A per-quartet Schwarz and density test still runs inside the kernel. Launch granularity was measured: from 21 launches up to about 400 the Fock time is flat to three digits on the 123-atom silica slice.}
+\end{frame}
+
+\begin{frame}[fragile]{The Fock build as an algorithm}{Host plans once per build; the device does everything per quartet}
+  \begin{columns}[T,onlytextwidth]
+    \column{.47\textwidth}
+      \begin{algorithm}[H]
+        \footnotesize
+        \caption{Plan (host)}
+        \KwIn{bins, $\tau$, $D_{\max}$ per bin}
+        $S \leftarrow \mathrm{int}(-\log_{10}\tau)$\;
+        \ForEach{bin pair $(A,B)$, $B\le A$}{
+          \lIf{$s_A+s_B>S$}{\textbf{skip}}
+          \lIf{density bound of $(A,B)$ $<\tau$}{\textbf{skip}}
+          append segment; $n\leftarrow |A||B|$ (or $|A|(|A|{+}1)/2$)\;
+          $\mathit{sOff} \leftarrow \mathit{sOff} + n$ \tcp*{prefix sum}
+        }
+        sort segments by class $(l_a l_b|l_c l_d)$\;
+        \ForEach{class}{launch its kernel (HGP or Rys)\;}
+      \end{algorithm}
+    \column{.49\textwidth}
+      \begin{algorithm}[H]
+        \footnotesize
+        \caption{Generated class kernel (device)}
+        \SetKwFor{DoCon}{do concurrent}{}{end do}
+        \DoCon{$t$ in this class's work}{
+          $seg\leftarrow$ bsearch$(\mathit{sOff},t)$\;
+          $(ab,cd)\leftarrow$ decode$(t-\mathit{sOff}_{seg})$\;
+          \lIf{$Q_{ab}Q_{cd}\,D_{\max}<\tau$}{\textbf{cycle}}
+          $(ab|cd)\leftarrow$ VRR, contract, HRR \tcp*{or Rys}
+          digest 8-fold into $J$, $K$ \tcp*{atomics}
+        }
+      \end{algorithm}
+      \vspace{-.3em}
+      {\scriptsize\color{cookieMuted} Every thread in a launch shares $(l_a,l_b,l_c,l_d)$, so ptxas budgets registers for one class, not the worst one. No launch geometry is given: \texttt{do concurrent} leaves it to the compiler.}
+  \end{columns}
+  \note{The same thing as pseudocode. The host walks bin pairs once per Fock build, rejects whole bin pairs by the integer Schwarz test and by a density bound, prefix-sums the work, sorts by class and launches one generated kernel per class, routed to HGP or Rys. On the device every work item binary-searches its segment, decodes its quartet, applies the exact per-quartet Schwarz-times-density test, evaluates the class and digests straight into J and K with atomics. Per-class kernels are what recover occupancy: the register budget is set for one class. The launch geometry is left to nvfortran on purpose: a tuned block size behind a directive would concede the point that standard Fortran is enough.}
 \end{frame}
 
 \begin{frame}{The kernels are generated, not hand-written}
@@ -207,6 +305,51 @@
     \small GPU HF, DFT and gradients in standard Fortran its developers can read and extend: no CUDA, no C++.
   \end{alertblock}
   \note{The genuinely new part is the analytic two-electron gradient via Rys quadrature in pure do concurrent. Development took w150 6-31G* at 1e-13 from 31.8 s to 8.4 s (3.8x): ordered survivor compaction in runs of 32 so warps stay ket-uniform; 32 lane-private copies of the gradient to stop same-address FP64 atomic serialisation ((ss|ss) -47\%, (ps|ss) -33\%); and a chunked compact pass for heavy classes. A same-algorithm CUDA twin came within 1.1-1.3x, so what separates Terco from GPU4PySCF is algorithm, not a language tax. Already running: DFT up to wB97X-V, RKS and UKS, validated against pyscf to about 3e-11, 32 runnable functionals; f energies, validated. Capability first, tuning later. The pitch: this is the avenue for GAMESS on GPUs.}
+\end{frame}
+
+\begin{frame}{Gradient: ordered survivor compaction}{Screen first, then compute only survivors, in an order that keeps warps uniform}
+  \centering
+  \begin{tikzpicture}[font=\footnotesize,
+      lane/.style={minimum width=.26cm,minimum height=.36cm,inner sep=0pt,draw=white,line width=.3pt},
+      arr/.style={-{Latex[length=2mm]},line width=.8pt,fortranPurple}]
+    % pattern of survivors in 32 work items (schematic)
+    \def\pat{1,0,0,1,1,0,0,0,1,0,1,1,0,0,0,1,0,0,1,0,1,0,0,0,1,1,0,0,1,0,0,1}
+    \node[anchor=west,font=\footnotesize\bfseries] at (0,2.95) {Fused: one warp, 32 work items};
+    \foreach \v [count=\i from 0] in \pat {
+      \ifnum\v=1 \node[lane,fill=fortranPurple] at (\i*.27+.13,2.45) {};
+      \else      \node[lane,fill=cookieLine]    at (\i*.27+.13,2.45) {}; \fi }
+    \node[anchor=west,cookieMuted,font=\scriptsize,text width=8.3cm] at (0,1.95)
+      {every lane screens, then the survivors run the integral body while the rest idle: divergence};
+    \draw[arr] (4.3,1.7) -- (4.3,1.3);
+    \node[anchor=west,font=\footnotesize\bfseries] at (0,1.05) {Screen pass: chunks of 32 (one warp), one atomic capture per chunk};
+    \foreach \v [count=\i from 0] in \pat {
+      \ifnum\v=1 \node[lane,fill=fortranPurple] at (\i*.27+.13,.55) {};
+      \else      \node[lane,fill=cookieLine]    at (\i*.27+.13,.55) {}; \fi }
+    \draw[arr] (4.3,.3) -- (4.3,-.1);
+    \node[anchor=west,font=\footnotesize\bfseries] at (0,-.35) {Compact pass: dense survivor list, in item order};
+    \foreach \i in {0,...,12} { \node[lane,fill=fortranPurple] at (\i*.27+.13,-.85) {}; }
+    \foreach \i in {13,...,31} { \node[lane,fill=fortranPurpleMid!45] at (\i*.27+.13,-.85) {}; }
+    \node[anchor=west,cookieMuted,font=\scriptsize,text width=8.3cm] at (0,-1.38)
+      {decode is bra-fastest, so neighbours share a ket pair; the next chunk's survivors fill the warp};
+    % right: lane-private gradients
+    \begin{scope}[xshift=9.2cm]
+      \node[anchor=west,font=\footnotesize\bfseries] at (0,2.95) {Lane-private gradients};
+      \foreach \c in {0,...,5} {
+        \node[draw=fortranPurple,fill=fortranPurple!10,minimum width=.48cm,minimum height=.9cm,
+              font=\tiny] (g\c) at (\c*.56+.25,2.0) {$g_{\c}$};
+      }
+      \node[font=\scriptsize,anchor=west] at (3.3,2.0) {\dots\ $g_{31}$};
+      \node[anchor=west,font=\scriptsize,text width=4.4cm] at (0,1.05)
+        {survivor $i$ adds into copy $\mathrm{mod}(i{-}1,32){+}1$: no same-address FP64 atomics; summed once at the end};
+      \node[anchor=west,font=\footnotesize\bfseries] at (0,-.1) {Measured, w150 6-31G*};
+      \node[anchor=west,font=\scriptsize,text width=4.4cm] at (0,-.85)
+        {(ps|ss): fused 3.97\,s $\rightarrow$ per-item append 3.31\,s $\rightarrow$ chunks of 32 2.15\,s\\
+         (ss|ss)+(ps|ss): 1 copy 3.11\,s $\rightarrow$ 32 copies 1.91\,s};
+    \end{scope}
+  \end{tikzpicture}
+  \vfill
+  {\scriptsize\color{cookieMuted} Survivor pattern schematic. Both passes are sliced from the same generated text: nothing in the integral body is retyped.}
+  \note{The first optimisation on the gradient, drawn. The fused kernel screens and computes in the same warp, so a warp in which only a few of 32 work items survive runs the full Rys body with most lanes idle; ket-uniform warps were 6 percent. The screen pass walks 32 consecutive work items per do concurrent iteration, one warp's worth, and appends the chunk's survivors with one atomic capture sized to its own count, in item order. Because the decode is bra-fastest, consecutive survivors share a ket pair, so the compact pass, running over the dense list, sees warps that are 68 percent ket-uniform. Measured on (ps|ss), w150 6-31G* at 1e-13: 3.97 s fused, 3.31 s with a per-item append, 2.15 s with chunks of 32; 64, 128 and 256 were slower. The second step gives each lane its own copy of the gradient, 32 copies of 3 x natm, so lanes never fight over the same address; that took (ss|ss)+(ps|ss) from 3.11 to 1.91 s. Both passes are cut out of the same generated kernel text.}
 \end{frame}
 
 \end{document}
