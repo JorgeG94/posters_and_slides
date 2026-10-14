@@ -55,23 +55,23 @@
 % =====================================================================
 \section{Lineage}
 
-\begin{frame}{Crawl, walk, run}{libERI and GAMESS OpenMP crawled, gmshpc walked, so that terco could run}
+\begin{frame}{Crawl, walk, run}{LibERI and GAMESS OpenMP crawled, gmshpc walked, so that Terco could run}
   \begin{columns}[T,onlytextwidth]
     \column{.31\textwidth}
-      \begin{block}{Crawled: libERI, GAMESS offload}
+      \begin{block}{Crawled: LibERI, GAMESS omp offload}
         GPU ERIs in GAMESS, then OpenMP target and \texttt{do concurrent}.\par\smallskip
         \cplx{Alkan et al., JCP 161, 082501; del Angel et al., f functions, JCP 164, 214118}\par\smallskip
         One shell quartet at a time starves the GPU.
       \end{block}
     \column{.31\textwidth}
       \begin{block}{Walked: gmshpc}
-        gms++ in CUDA C with four streams, from the Exascale Computing Project.\par\smallskip
-        Binned shell pairs keep the GPU busy, but it is a second code base with a CUDA maintenance burden.
+        libcchem in CUDA C with streams, byproduct of the ECP.\par\smallskip
+        Binned shell pairs keep the GPU busy, but it is a second code base with a CUDA maintenance burden. Also half the group does not speak C++.
       \end{block}
     \column{.31\textwidth}
       \begin{exampleblock}{Runs: terco}
-        The same science in standard Fortran \texttt{do concurrent}.\par\smallskip
-        \textbf{No CUDA, no C++.} The best ideas from the literature, shown working.
+        Is the difference algorithmic or the Fortran/CUDA gap?\par\medskip
+        Explore the limits of Fortran standard parallelism.
       \end{exampleblock}
   \end{columns}
   \note{Each predecessor proved something. libERI and the GAMESS offload work showed GAMESS integrals can run on GPUs, but the per-quartet work unit leaves the device idle. gmshpc, from the Exascale Computing Project, showed that binning shell pairs fixes that, in CUDA C with streams. terco keeps the batching idea and the science and writes all of it in standard do concurrent Fortran: no CUDA, no C++, one source that also builds on the CPU. Most of terco is best practice plus careful tuning; the two-electron gradient is the new part.}
@@ -80,22 +80,22 @@
 % =====================================================================
 \section{How it works}
 
-\begin{frame}{How terco works}
-  \small
+\begin{frame}{How Terco works}
+  \footnotesize
   \begin{columns}[T,onlytextwidth]
     \column{.485\textwidth}
-      \begin{block}{Standard Fortran only}
-        Kernels are pure \texttt{do concurrent} (\texttt{nvfortran -stdpar=gpu}). OpenACC only for data, \texttt{routine seq} and atomics. The same source builds with gfortran on the CPU.
+      \begin{block}{Standard Fortran only (\texttt{do concurrent})}
+        Kernels are pure \texttt{do concurrent} (\texttt{nvfortran -stdpar=gpu}). OpenACC only moves data and does atomics. The same source builds with gfortran on the CPU, and CI converts it to OpenMP.
       \end{block}
       \begin{block}{Integrals per class}
-        Head-Gordon--Pople (VRR, contraction, HRR), 81 classes through d; Rys covers f. Direct 8-fold digestion into J and K.
+        HGP: VRR with Gill's sieve, contraction, then HRR, 81 classes through d. Direct 8-fold digestion into J and K, scaled for hybrids. Rys per class covers f.
       \end{block}
     \column{.485\textwidth}
-      \begin{block}{Binned shell pairs (gmshpc)}
-        Quartets are never stored. Shell pairs are binned by type $(l_a,l_b)$ and Schwarz decade; a bin pair is kept iff $s_{ab}+s_{cd}\le-\log_{10}\tau$. Each thread derives its quartet from its index.
+      \begin{block}{Binned shell pairs (ECP/libcchem/gmshpc)}
+        Quartets are never stored. Shell pairs are binned by type $(l_a,l_b)$ and Schwarz exponent; a bin pair is kept if $s_{ab}+s_{cd}\le-\log_{10}\tau$. Each thread derives its quartet from its index.
       \end{block}
       \begin{block}{Basis and data}
-        BSE JSON or libcint arrays. Cartesian kernels, spherical on top. Data stays on the device for the whole SCF.
+        The caller supplies the basis (BSE JSON or plain arrays). Kernels run in Cartesians, spherical on top. Data stays on the device for the whole SCF.
       \end{block}
   \end{columns}
   \begin{alertblock}{Why bins}
