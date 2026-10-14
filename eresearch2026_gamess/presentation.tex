@@ -1,0 +1,426 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,fit}
+\usepackage[main=english]{babel}
+
+\definecolor{fortranPurple}{HTML}{503874}
+\usetheme[
+  accent=fortranPurple,
+  progressbar=foot,
+  sectionpage=none,
+  subsectionpage=none,
+  numbering=fraction,
+  numberrail=section,
+  block=fill,
+  notes=hide,
+  closing=contact
+]{cookie}
+
+\newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
+
+% Footer with a wider author box (same fix as the other decks)
+\makeatletter
+\setbeamertemplate{footline}{%
+  \leavevmode\vbox{%
+    \ifdefstring{\cookie@progressbar}{foot}{\hbox{\cookie@progressrule{\paperwidth}}}{}%
+    \hbox{%
+      \begin{beamercolorbox}[wd=.30\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.02\paperwidth]{footline}%
+        \usebeamerfont{footline}\insertshortauthor
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.52\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.012\paperwidth,rightskip=.012\paperwidth]{footline}%
+        \usebeamerfont{footline}\insertshorttitle%
+        \ifx\insertsectionhead\@empty\else\hfill\cookie@footersection{\insertsectionhead}\fi%
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.18\paperwidth,ht=2.7ex,dp=1.15ex,leftskip=.027\paperwidth,rightskip=.014\paperwidth plus 1fil]{footline right}%
+        \usebeamerfont{footline number}\strut\cookie@insertnumber
+      \end{beamercolorbox}%
+    }%
+  }%
+}
+\makeatother
+
+\title[Agentic modernisation of legacy code]{Modernizing Legacy Scientific Codebases}
+\subtitle{\small An Agentic Approach to GPU Readiness\\and Technical Debt}
+\author[J.\ Gálvez Vallejo]{Jorge Luis Gálvez Vallejo}
+\institute{NCI \textperiodcentered\ ACCESS-NRI}
+\cookieemail{jorge.galvezvallejo@anu.edu.au}
+\cookieuni{Australian National University}
+\cookielocation{Canberra, Australia}
+\date{eResearch Australasia 2026}
+\cookietagline{eResearch Australasia 2026}
+
+\titlegraphic{%
+  \begin{tcolorbox}[enhanced,colback=white,colframe=white,boxrule=0pt,
+      arc=5pt,width=3.1cm,left=7pt,right=7pt,top=8pt,bottom=8pt,
+      halign=center,valign=center,nobeforeafter,box align=center]
+    \includegraphics[height=1.05cm]{assets/nci.png}\\[.8em]
+    \includegraphics[height=1.05cm]{assets/access-nri.png}
+  \end{tcolorbox}%
+}
+\cookieclosingtitle{Thank you}
+\cookieclosingtext{Pick the proof first. Then let the agent loose.\\ Questions?}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\section{The problem}
+
+\begin{frame}[standout,noframenumbering]
+  \Huge 1.7 million lines of Fortran.\\ Zero unit tests.
+\end{frame}
+
+\begin{frame}{Who writes scientific software?}{Mostly the people least equipped to test it}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item A graduate student in their third year, and a postdoc who \textbf{inherited} the code from someone who left.
+    \item Very good at the science.
+    \item Nobody taught them to build a test harness --- and nobody has the time to learn.
+  \end{itemize}
+  \vspace{.4em}
+  \begin{cookiequote}
+    What happens when that code needs to move to GPUs, and what can an agentic coding system actually do about it?
+  \end{cookiequote}
+  \note{My example is GAMESS, a quantum chemistry package with a history going back to the 1980s.}
+\end{frame}
+
+\begin{frame}{Why GAMESS?}
+  \begin{columns}[T,onlytextwidth]
+    \column{.54\textwidth}
+      \begin{itemize}\setlength\itemsep{6pt}
+        \item Quantum chemistry package, history back to the \textbf{1980s}.
+        \item I worked on GAMESS throughput for my entire PhD --- and I \emph{wanted} to fix it.
+        \item So: why choose it?
+      \end{itemize}
+    \column{.42\textwidth}
+      \begin{cookiecard}[title=My claim]
+        There is no code in the world as hard to fix as GAMESS. It makes MOM6, WRF and others look like a kindergarten.
+      \end{cookiecard}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The problem is the feedback loop}{Testing the physics vs.\ testing the code}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{block}{Testing the physics}
+        Change something, run the code, compare the total energy to a reference. Matches to ten digits? Assume it is fine.
+        \begin{itemize}\setlength\itemsep{2pt}
+          \item Slow
+          \item Only covers the paths your molecule exercises
+          \item When it fails, it says almost nothing about \emph{where}
+        \end{itemize}
+      \end{block}
+    \column{.48\textwidth}
+      \begin{exampleblock}{Testing the code}
+        Fast, local, and tells you which line changed behaviour.
+        \begin{itemize}\setlength\itemsep{2pt}
+          \item Unit tests, bounds checks, object-code comparison
+          \item Exactly what GAMESS does not have
+        \end{itemize}
+      \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Every change is a thirty-hour bet}
+  \begin{columns}[T,onlytextwidth]
+    \column{.46\textwidth}
+      \begin{itemize}\setlength\itemsep{5pt}
+        \item $\sim$2,000 test inputs; \textbf{1,570} run by default.
+        \item A serial run of the \textbf{728} that have been timed: \textbf{30 hours}.
+        \item So nobody runs it, and people stop refactoring.
+        \item A GPU port is a structural change: \textbf{you cannot port a code you are afraid to touch.}
+      \end{itemize}
+    \column{.50\textwidth}
+      \centering
+      \begin{tikzpicture}[node distance=7mm]
+        \node[cookie node,minimum width=2.4cm] (e) {Edit};
+        \node[cookie accent node,minimum width=2.4cm,right=14mm of e] (w) {Wait 30\,h};
+        \node[cookie node,minimum width=2.4cm,below=9mm of $(e)!.5!(w)$] (l) {Learn nothing};
+        \draw[cookie arrow] (e) -- (w);
+        \draw[cookie arrow] (w) -- (l);
+        \draw[cookie arrow] (l) -- (e);
+      \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{GAMESS}
+
+\begin{frame}{What GAMESS looks like}{Measured, not estimated}
+  \small
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\textwidth}{@{}l X@{}}
+    \toprule
+    \textbf{Source} & about 1.7 million lines, 440 files \\
+    \textbf{Source form} & 331 files fixed-form, 108 free \cplx{(punched-card layout)} \\
+    \textbf{COMMON blocks} & 719 named blocks, 23,646 declarations, copy-pasted into files \\
+    \textbf{Text stored in numbers} & 12,642 Hollerith constants \\
+    \textbf{Memory} & one global array, \texttt{X}, reached by pointer arithmetic \\
+    \textbf{Threading} & $\sim$45 blocks made thread-private by a shell script that rewrites the source at build time \\
+    \textbf{Unit tests} & \textbf{none} \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{.5em}
+
+  Two matter most for GPUs: the \textbf{global memory array} and the \textbf{thread-private blocks}.
+\end{frame}
+
+% =====================================================================
+\section{Rule one}
+
+\begin{frame}{Build the go/no-go before you touch anything}{A trustworthy regression gate}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item The first thing the agents did was \textbf{not change code}. It was \textbf{measure}.
+    \item Nine parallel exploration agents, each with one question: the shape of the memory array, where the COMMON blocks go, \dots
+    \item About \textbf{8,000 lines} of reports came back.
+    \item I then organised them by what I knew about GAMESS: deprecated constructs, deleted constructs, COMMON blocks, modules, \dots
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The most useful result: things I believed that were wrong}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{alertblock}{I thought\dots}
+        The reference outputs were too imprecise for exact comparison.
+      \end{alertblock}
+      \begin{exampleblock}{Actually}
+        They are full precision. They reproduce only \textbf{93\%} of the time, because they came from another machine.
+      \end{exampleblock}
+    \column{.48\textwidth}
+      \begin{alertblock}{I thought\dots}
+        Changing COMMON layouts would break restart files.
+      \end{alertblock}
+      \begin{exampleblock}{Actually}
+        Almost none of it is ever written to disk.
+      \end{exampleblock}
+  \end{columns}
+  \vspace{.3em}
+  Each would have changed the plan. An agent that read the code carefully found them \textbf{in an afternoon}.
+\end{frame}
+
+\begin{frame}{A reproducibility contract}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{cookiecard}[title={1 rank, 1 thread}]
+        Output is \textbf{byte-identical} run to run.\\[.4em]
+        $\Rightarrow$ the \textbf{exact gate}.
+      \end{cookiecard}
+    \column{.48\textwidth}
+      \begin{cookiecard}[title=2 ranks]
+        Not identical: load balancing reorders sums.\\[.4em]
+        $\Rightarrow$ the parallel configuration only gets a \textbf{tolerance}.
+      \end{cookiecard}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Build system}
+
+\begin{frame}{Workflow one: the build system}{The best first job for an agent --- the answer is checkable: it builds or it does not}
+  \begin{columns}[T,onlytextwidth]
+    \column{.56\textwidth}
+      \begin{itemize}\setlength\itemsep{5pt}
+        \item CMake registers every validation deck as its own test, with tiers: tiny, small, medium, slow. \textbf{776 $\to$ 1,196 tests}.
+        \item The script that rewrote every source file to inject OpenMP directives is \textbf{retired}.
+        \item Configuration now \textbf{fails} when it names a missing file.
+      \end{itemize}
+    \column{.40\textwidth}
+      \begin{alertblock}{Found by reading all 75 entries}
+        A table of per-file compiler workarounds had \textbf{11 entries naming files that do not exist}. Five were typos --- those files were silently getting the wrong optimisation flags.
+      \end{alertblock}
+  \end{columns}
+  \note{I presented the CMake work last year.}
+\end{frame}
+
+% =====================================================================
+\section{Provable change}
+
+\begin{frame}{Workflow two: transformations you can prove}{The idea I most want you to take away}
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item Fixed-form $\to$ free-form, lowercasing, naming every \texttt{END} statement: mechanical. An agent will do them.
+    \item The problem: knowing it did them right across \textbf{440 files} when tests cover $\sim$20\% of the lines.
+  \end{itemize}
+  \vspace{.2em}
+  \centering
+  \begin{tikzpicture}[node distance=8mm]
+    \node[cookie node,align=center] (old) {old file};
+    \node[cookie node,align=center,below=5mm of old] (new) {new file};
+    \node[cookie accent node,align=center,right=18mm of $(old)!.5!(new)$] (obj) {same flags\\same filename};
+    \node[cookie accent node,align=center,right=14mm of obj] (cmp) {compare\\\textbf{object code}};
+    \draw[cookie arrow] (old) -- (obj);
+    \draw[cookie arrow] (new) -- (obj);
+    \draw[cookie arrow] (obj) -- (cmp);
+  \end{tikzpicture}
+  \vspace{.3em}
+
+  \emph{Do not use the tests. Compare the object code.}
+\end{frame}
+
+\begin{frame}{Same object code}{A stronger claim than a green test suite}
+  \begin{columns}[T,onlytextwidth]
+    \column{.48\textwidth}
+      \begin{cookiecard}[title=Lowercasing pass]
+        \centering
+        {\Huge\textbf{441}} files\\
+        byte-identical object code\\
+        \textbf{zero exceptions}
+      \end{cookiecard}
+    \column{.48\textwidth}
+      \begin{cookiecard}[title={Naming 7,506 END statements}]
+        \centering
+        {\Huge\textbf{366}} files (of 383)\\
+        byte-identical object code\\
+        \textbf{zero exceptions}
+      \end{cookiecard}
+  \end{columns}
+  \vspace{.4em}
+  \centering
+  It covers inputs \textbf{nobody has written}.
+\end{frame}
+
+\begin{frame}{And the process found bugs in the tools themselves}
+  \begin{itemize}\setlength\itemsep{5pt}
+    \item The fixed-to-free converter \textbf{silently truncated} statements when a Hollerith string contained an apostrophe.
+    \item The lowercaser turned \texttt{8HCCSD(T)} into \texttt{8HCCSD(t)}.
+    \item An apostrophe in one string made a quote on a \emph{later} line get lowercased.
+    \item We have 170 payloads with punctuation --- not hypothetical.
+  \end{itemize}
+  \vspace{.3em}
+  \begin{exampleblock}{Division of labour}
+    The agent wrote the tool; the object-code comparison caught the tool; the agent fixed the tool. \textbf{The human decided what counted as proof.}
+  \end{exampleblock}
+\end{frame}
+
+% =====================================================================
+\section{The X array}
+
+\begin{frame}[fragile]{Workflow three: re-architecting}{The X array --- every piece of numerical memory lives in one pool}
+  \begin{columns}[T,onlytextwidth]
+    \column{.52\textwidth}
+      \begin{cookiecode}[title={three lines of Fortran}]{Fortran}
+common /fmcom/ x(1)    ! one word
+allocate(memory(memlim))
+loffs = (loc(memory) - &
+         loc(x))/8 + 1
+      \end{cookiecode}
+    \column{.44\textwidth}
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item Code indexes a one-element array by the \textbf{distance to an unrelated object}.
+        \item Works because nothing checks bounds and the address space is flat.
+        \item Undefined behaviour in every Fortran standard.
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The cost beyond ugliness}
+  \begin{itemize}\setlength\itemsep{8pt}
+    \item You can \textbf{never turn on bounds checking}.
+    \item Every array-bounds bug in 1.7 million lines is \textbf{invisible}.
+    \item You cannot hand that memory to a GPU runtime in any principled way.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Why this was tractable}{The agent measured before proposing}
+  \begin{columns}[T,onlytextwidth]
+    \column{.5\textwidth}
+      \begin{itemize}\setlength\itemsep{5pt}
+        \item \textbf{1,230} declarations, \textbf{one} shape, \textbf{zero} with more than one member.
+        \item The block carries one word that nobody reads: an \textbf{address anchor}, not shared storage.
+        \item That made it safe to replace.
+      \end{itemize}
+    \column{.46\textwidth}
+      \begin{exampleblock}{Result}
+        \texttt{x} became a real allocatable.\\
+        \textbf{5,123} allocation calls were untouched.
+      \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{What the first bounds-checked run found}{Switched on for the first time}
+  \begin{columns}[T,onlytextwidth]
+    \column{.38\textwidth}
+      \centering
+      {\fontsize{48}{52}\selectfont\color{cookieAccent}\textbf{143}}\\[.2em]
+      of 155 tiny tests failed\\[.3em]
+      \cplx{from eight source lines}
+    \column{.58\textwidth}
+      \begin{itemize}\setlength\itemsep{5pt}
+        \item \textbf{108} from a single zero-length copy that reads one element past the end of an array.
+        \item Real defects too: a write one past the end of a ten-element array in the input parser, which nothing has ever reported.
+        \item All pre-existing. All confirmed at the baseline. \textbf{None findable before.}
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{GPU readiness}
+
+\begin{frame}{What this buys you for GPUs}{Be precise about the claim}
+  \begin{alertblock}{We have not ported GAMESS to a GPU.}
+    We have removed the things that make a port dangerous.
+  \end{alertblock}
+  \small
+  \begin{itemize}\setlength\itemsep{3pt}
+    \item[\cookiecheck] Global memory array is a real allocatable: \textbf{bounds checking works}.
+    \item[\cookiecheck] \textbf{714 of 718} COMMON blocks live in modules: data has an owner and a type.
+    \item[\cookiecheck] Math-library matrix multiplies route through a \textbf{BLAS wrapper layer} --- the seam where a device backend plugs in.
+    \item[\cookiecheck] A small device-management library wraps \textbf{CUDA and HIP} behind one interface.
+    \item[\cookiecheck] OpenMP thread-private directives are \textbf{in the source}, where a reviewer can see them.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What is next}
+  \centering
+  \begin{tikzpicture}[node distance=10mm]
+    \node[cookie node,align=center,minimum width=3.6cm,minimum height=1.3cm] (a) {Bounds-checked\\triage};
+    \node[cookie node,align=center,minimum width=3.6cm,minimum height=1.3cm,right=of a] (b) {Remaining\\COMMON residue};
+    \node[cookie accent node,align=center,minimum width=3.6cm,minimum height=1.3cm,right=of b] (c) {GPU work};
+    \draw[cookie arrow] (a) -- (b);
+    \draw[cookie arrow] (b) -- (c);
+  \end{tikzpicture}
+\end{frame}
+
+% =====================================================================
+\section{Lessons}
+
+\begin{frame}{What did not work, and what I would tell you to do}
+  \begin{columns}[T,onlytextwidth]
+    \column{.31\textwidth}
+      \begin{cookiecard}[title=1. Go small]
+        \footnotesize
+        Mass mechanical change has failed here before: an earlier sweep of the constants was \textbf{reverted five commits later}. Small slices, each with its own gate.
+      \end{cookiecard}
+    \column{.31\textwidth}
+      \begin{cookiecard}[title=2. Distrust checkers]
+        \footnotesize
+        The agent's own ad-hoc source-level checker raised false alarms twice. \textbf{Object-code comparison was the authority}, the checker was not.
+      \end{cookiecard}
+    \column{.31\textwidth}
+      \begin{cookiecard}[title=3. Some calls are human]
+        \footnotesize
+        Four COMMON blocks declare the same array with \textbf{different sizes} in different files. The tool refuses to pick one --- correctly. Someone who knows the physics must.
+      \end{cookiecard}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Close}
+
+\begin{frame}[standout,noframenumbering]
+  \Huge Prove it, then change it.
+\end{frame}
+
+\begin{frame}{Take-away}
+  \begin{itemize}\setlength\itemsep{8pt}
+    \item The graduate student is not going to learn software engineering in a weekend.
+    \item But an agent can \textbf{build the gate}, do the \textbf{tedious part}, and \textbf{prove} it did.
+    \item \textbf{Pick the proof first. Then let the agent loose.}
+  \end{itemize}
+\end{frame}
+
+
+\end{document}
