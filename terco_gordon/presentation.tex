@@ -1,0 +1,212 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage[main=english]{babel}
+\usepackage{ragged2e}
+
+\definecolor{fortranPurple}{HTML}{503874}  % poster deep purple
+\definecolor{fortranPurpleMid}{HTML}{7E5AA6}
+\usetheme[
+  accent=fortranPurple,
+  progressbar=foot,
+  sectionpage=none,
+  numbering=fraction,
+  block=fill,
+  notes=hide,
+  closing=contact
+]{cookie}
+
+% big headline number + its caption
+\newcommand{\bignum}[2][fortranPurple]{{\fontsize{30}{32}\selectfont\bfseries\color{#1}#2}}
+\newcommand{\cplx}[1]{{\footnotesize\color{cookieMuted}#1}}
+\newcommand{\src}[1]{{\scriptsize\color{cookieMuted}#1}}
+
+\title[terco]{terco}
+\subtitle{GPU integrals in standard Fortran: the avenue for GAMESS on GPUs}
+\author[Jorge L. Gálvez Vallejo]{Jorge Luis Gálvez Vallejo}
+\cookieemail{jorge.galvezvallejo@anu.edu.au}
+\institute{NCI \textperiodcentered\ ANU}
+\cookieuni{Australian National University}
+\cookielocation{Canberra, Australia}
+\date{\today}
+\cookietagline{Gordon group meeting}
+
+\titlegraphic{%
+  \begin{tcolorbox}[enhanced,colback=white,colframe=white,boxrule=0pt,
+      arc=5pt,width=3.1cm,left=7pt,right=7pt,top=8pt,bottom=8pt,
+      halign=center,valign=center,nobeforeafter,box align=center]
+    \includegraphics[height=1.05cm]{assets/nci.png}
+  \end{tcolorbox}%
+}
+\cookieclosingtitle{Thank you}
+\cookieclosingtext{GPU HF, DFT and gradients for GAMESS, from a standard-Fortran library its developers can read and extend.}
+\cookieclosingqr{https://github.com/JorgeG94/terco}
+\cookieclosingqrlabel{github.com/JorgeG94/terco}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\section{Lineage}
+
+\begin{frame}{Crawl, walk, run}{libERI and GAMESS OpenMP crawled, gmshpc walked, so that terco could run}
+  \begin{columns}[T,onlytextwidth]
+    \column{.31\textwidth}
+      \begin{block}{Crawled: libERI, GAMESS offload}
+        GPU ERIs in GAMESS, then OpenMP target and \texttt{do concurrent}.\par\smallskip
+        \cplx{Alkan et al., JCP 161, 082501; del Angel et al., f functions, JCP 164, 214118}\par\smallskip
+        One shell quartet at a time starves the GPU.
+      \end{block}
+    \column{.31\textwidth}
+      \begin{block}{Walked: gmshpc}
+        gms++ in CUDA C with four streams, from the Exascale Computing Project.\par\smallskip
+        Binned shell pairs keep the GPU busy, but it is a second code base with a CUDA maintenance burden.
+      \end{block}
+    \column{.31\textwidth}
+      \begin{exampleblock}{Runs: terco}
+        The same science in standard Fortran \texttt{do concurrent}.\par\smallskip
+        \textbf{No CUDA, no C++.} The best ideas from the literature, shown working.
+      \end{exampleblock}
+  \end{columns}
+  \note{Each predecessor proved something. libERI and the GAMESS offload work showed GAMESS integrals can run on GPUs, but the per-quartet work unit leaves the device idle. gmshpc, from the Exascale Computing Project, showed that binning shell pairs fixes that, in CUDA C with streams. terco keeps the batching idea and the science and writes all of it in standard do concurrent Fortran: no CUDA, no C++, one source that also builds on the CPU. Most of terco is best practice plus careful tuning; the two-electron gradient is the new part.}
+\end{frame}
+
+% =====================================================================
+\section{How it works}
+
+\begin{frame}{How terco works}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{.485\textwidth}
+      \begin{block}{Standard Fortran only}
+        Kernels are pure \texttt{do concurrent} (\texttt{nvfortran -stdpar=gpu}). OpenACC only for data, \texttt{routine seq} and atomics. The same source builds with gfortran on the CPU.
+      \end{block}
+      \begin{block}{Integrals per class}
+        Head-Gordon--Pople (VRR, contraction, HRR), 81 classes through d; Rys covers f. Direct 8-fold digestion into J and K.
+      \end{block}
+    \column{.485\textwidth}
+      \begin{block}{Binned shell pairs (gmshpc)}
+        Quartets are never stored. Shell pairs are binned by type $(l_a,l_b)$ and Schwarz decade; a bin pair is kept iff $s_{ab}+s_{cd}\le-\log_{10}\tau$. Each thread derives its quartet from its index.
+      \end{block}
+      \begin{block}{Basis and data}
+        BSE JSON or libcint arrays. Cartesian kernels, spherical on top. Data stays on the device for the whole SCF.
+      \end{block}
+  \end{columns}
+  \begin{alertblock}{Why bins}
+    At 75 waters/6-31G the stored quartet list cost 26\,s of host time and 11.7\,GB. Binning by type also sorts by class for free.
+  \end{alertblock}
+  \note{Four ideas carry the design. (1) Every kernel is standard do concurrent; OpenACC only for data placement, routine seq and atomics. (2) The binned shell-pair container from gmshpc, a product of the Exascale Computing Project: bin the O(N^2) pair list by angular-momentum type and Schwarz decade; one launch covers the cross product of two bins and every thread shares (la,lb,lc,ld). (3) Head-Gordon-Pople per class, generated, with direct digestion; Rys quadrature as a second family and the only path for f. (4) Validation against pyscf, libcint and libxc: Fock matrices element-wise to about 1e-12; no test freezes terco's own output.}
+\end{frame}
+
+\begin{frame}{The kernels are generated, not hand-written}
+  \centering
+  \begin{tikzpicture}[
+      box/.style={draw=fortranPurple,line width=.8pt,rounded corners=4pt,fill=white,
+                  minimum height=1.35cm,text width=3.2cm,align=center,font=\small},
+      arr/.style={-{Latex[length=2.5mm]},line width=1pt,fortranPurple}]
+    \node[box] (m) {\textbf{The maths}\\[2pt]VRR \textperiodcentered\ HRR \textperiodcentered\ Rys roots \textperiodcentered\ 1e \textperiodcentered\ DF};
+    \node[box,right=.8cm of m,text width=4.4cm] (g) {\textbf{Python generators}\\[2pt]{\ttfamily\scriptsize gen\_vrr gen\_hrr gen\_perclass\\ gen\_rys gen\_1e gen\_df}};
+    \node[box,right=.8cm of g,fill=fortranPurple,text=white] (k) {\textbf{Fortran kernels}\\[2pt]one file per class: small units, parallel build};
+    \draw[arr] (m) -- (g);
+    \draw[arr] (g) -- (k);
+  \end{tikzpicture}
+  \par\vspace{.8em}\raggedright
+  \begin{columns}[T,onlytextwidth]
+    \column{.31\textwidth}
+      \begin{block}{Never edited by hand}
+        A new algorithm is a generator change. CI regenerates the committed kernels and requires them byte for byte.
+      \end{block}
+    \column{.31\textwidth}
+      \begin{block}{Rys from the HGP skeleton}
+        Shared decode, screening and digestion; only the integral body differs. Under 1\,s to generate, where full HGP text at f took 6\,min and 136\,MB.
+      \end{block}
+    \column{.31\textwidth}
+      \begin{block}{DFT the same way}
+        ExchCXX functionals machine-translated to Fortran: XC on the device, no libxc. \textbf{32 run today, wB97X-V included}; the rest say what they need.
+      \end{block}
+  \end{columns}
+  \note{Python generators emit every kernel from the maths, one file per angular-momentum class, so each compile unit stays small and the build runs in parallel. Generated code is never hand-edited, and CI checks that the committed set regenerates byte for byte. The Rys family is spliced from a skeleton of the HGP kernel, which is what made f and g reachable. DFT follows the same pattern: the functional registry is generated from ExchCXX's own definitions; 32 functionals run today, up to wB97X-V with range-separated exchange and VV10, and every other ExchCXX functional is registered with an explicit "not available: needs X" error.}
+\end{frame}
+
+% =====================================================================
+\section{Performance}
+
+\begin{frame}{Performance through d, and f now works}
+  \begin{columns}[T,onlytextwidth]
+    \column{.31\textwidth}
+      \bignum{6.8$\times$}\par
+      \textbf{faster than libERI}\par
+      \cplx{w404, 6-31G (5k basis functions); one Fock build: 22\,s vs 149\,s}
+    \column{.31\textwidth}
+      \bignum[fortranPurpleMid]{$\pm$10\%}\par
+      \textbf{of gmshpc's CUDA C}\par
+      \cplx{w172, 1e-10: 6-31G* 2.26 vs 2.37\,s; 6-31G 0.968 vs 0.887\,s}
+    \column{.31\textwidth}
+      \bignum{0.92$\times$}\par
+      \textbf{of GPU4PySCF's time (d)}\par
+      \cplx{w20, cc-pVTZ without f (1100 AOs), Fock build: 0.77 vs 0.84\,s}
+  \end{columns}
+  \vspace{.6em}
+  \begin{columns}[T,onlytextwidth]
+    \column{.52\textwidth}
+      \begin{exampleblock}{Milestone: f functions}
+        \begin{itemize}\setlength\itemsep{2pt}\small
+          \item Every class with an f shell is one of \textbf{175 generated Rys kernels}; HGP stays at d.
+          \item Matches pyscf on the first build: Fock 8e-13 (water/cc-pVTZ), 2.6e-11 (formamide/def2-TZVP); RHF to 6e-12.
+          \item Roots to 9, so g is reachable. Full GPU build $\sim$32\,min on 4 cores.
+        \end{itemize}
+      \end{exampleblock}
+    \column{.44\textwidth}
+      \small
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        cc-pVTZ Fock, 1e-13 & terco & GPU4PySCF \\
+        \midrule
+        w10, f (650 AOs)  & 0.70\,s & 0.65\,s \\
+        w20, f (1300 AOs) & 2.20\,s & 1.44\,s \\
+        w20, no f (1100)  & 0.77\,s & 0.84\,s \\
+        \bottomrule
+      \end{tabular}\par\smallskip
+      \cplx{The f kernels are untuned; tuning has not started.}
+  \end{columns}
+  \vfill
+  \src{One V100. Two-electron gradient against GPU4PySCF, 6-31G*: 0.51$\times$ its time at w20, 1.24$\times$ at w150 (8.41 vs 6.8\,s).}
+  \note{All on one V100. libERI: one Fock build of w404 in 6-31G, 22 s against 149 s. gmshpc on w172 at 1e-10: about 5\% faster in 6-31G* and about 9\% slower in 6-31G, so standard Fortran costs at most about 10\% against hand-written CUDA. GPU4PySCF 1.8.1: ahead through d. The f panel is a capability milestone, not a race: f works, in standard Fortran, and it is validated, spherical and Cartesian, CPU and GPU. The f classes alone cost terco about 2.4 times what they cost GPU4PySCF today, and those kernels are untuned (mostly loop-form Rys). Gradient: 0.51x at w20, 0.90x at w50, 1.13x at w100, 1.24x at w150.}
+\end{frame}
+
+% =====================================================================
+\section{What is new}
+
+\begin{frame}{New: an analytic two-electron gradient}
+  \vspace{-.4em}
+  \begin{columns}[T,onlytextwidth]
+    \column{.52\textwidth}
+      {\footnotesize Rys, derivatives by raising angular momentum, D by translational invariance, RHF and UKS-ready, in pure \texttt{do concurrent}. w150 6-31G*, 1e-13:}\par
+      \bignum{31.8\,s $\rightarrow$ 8.4\,s}\par
+      \begin{enumerate}\setlength\itemsep{1pt}\footnotesize
+        \item \textbf{Ordered compaction:} screen, then compute only survivors; ket-uniform warps 6\% $\rightarrow$ 68\%
+        \item \textbf{Lane-private gradients:} no same-address FP64 atomics; (ss$|$ss) $-47\%$
+        \item \textbf{Chunked heavy classes:} (pp$|$pp) 0.64 $\rightarrow$ 0.13\,s, (dp$|$pp) 1.56 $\rightarrow$ 0.33\,s
+      \end{enumerate}
+    \column{.44\textwidth}
+      \begin{block}{Validated, not frozen}
+        \footnotesize pyscf \texttt{int2e\_ip1} to 1e-12 and finite differences; no test checks terco against its own output. A CUDA twin of the same algorithm was within 1.1--1.3$\times$: the gap left is algorithmic.
+      \end{block}
+      \begin{block}{Running today, and next}
+        \footnotesize DFT through wB97X-V (range separation, VV10), RKS and UKS, pyscf to $\sim$3e-11; f energies; MPI and a \texttt{bind(c)} ABI.\par\smallskip
+        \textbf{Next:} f tuning, f gradients, meta-GGAs, density fitting.
+      \end{block}
+  \end{columns}
+  \begin{alertblock}{For GAMESS}
+    \small GPU HF, DFT and gradients in standard Fortran its developers can read and extend: no CUDA, no C++.
+  \end{alertblock}
+  \note{The genuinely new part is the analytic two-electron gradient via Rys quadrature in pure do concurrent. Development took w150 6-31G* at 1e-13 from 31.8 s to 8.4 s (3.8x): ordered survivor compaction in runs of 32 so warps stay ket-uniform; 32 lane-private copies of the gradient to stop same-address FP64 atomic serialisation ((ss|ss) -47\%, (ps|ss) -33\%); and a chunked compact pass for heavy classes. A same-algorithm CUDA twin came within 1.1-1.3x, so what separates terco from GPU4PySCF is algorithm, not a language tax. Already running: DFT up to wB97X-V, RKS and UKS, validated against pyscf to about 3e-11, 32 runnable functionals; f energies, validated. Capability first, tuning later. The pitch: this is the avenue for GAMESS on GPUs.}
+\end{frame}
+
+\end{document}
