@@ -1,0 +1,27 @@
+# LaTeX build artifacts (keep .tex, .sty, and .pdf)
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.vrb
+*.listing
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.lof
+*.lot
+*.xdv
+*.dvi
+*.idx
+*.ilg
+*.ind
+*.thm
+*.fmt
+*.pyg
+_minted*/

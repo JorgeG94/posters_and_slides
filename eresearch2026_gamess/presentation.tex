@@ -71,7 +71,7 @@
 \section{The problem}
 
 \begin{frame}[standout,noframenumbering]
-  \Huge 1.7 million lines of Fortran.\\ Zero unit tests.
+  Nightmare \\ \Huge 1.7 million lines of Fortran.\\ Zero unit tests.
 \end{frame}
 
 \begin{frame}{Who writes scientific software?}{Mostly the people least equipped to test it}
@@ -97,12 +97,12 @@
       \end{itemize}
     \column{.42\textwidth}
       \begin{cookiecard}[title=My claim]
-        There is no code in the world as hard to fix as GAMESS. It makes MOM6, WRF and others look like a kindergarten.
+        There is no code in the world as hard to fix as GAMESS. 
       \end{cookiecard}
   \end{columns}
 \end{frame}
 
-\begin{frame}{The problem is the feedback loop}{Testing the physics vs.\ testing the code}
+\begin{frame}{The problem is testing}{Testing the physics vs.\ testing the code}
   \begin{columns}[T,onlytextwidth]
     \column{.48\textwidth}
       \begin{block}{Testing the physics}
@@ -129,7 +129,7 @@
     \column{.46\textwidth}
       \begin{itemize}\setlength\itemsep{5pt}
         \item $\sim$2,000 test inputs; \textbf{1,570} run by default.
-        \item A serial run of the \textbf{728} that have been timed: \textbf{30 hours}.
+        \item A serial run of the \textbf{728} that have been timed: \textbf{20 hours}.
         \item So nobody runs it, and people stop refactoring.
         \item A GPU port is a structural change: \textbf{you cannot port a code you are afraid to touch.}
       \end{itemize}
@@ -137,7 +137,7 @@
       \centering
       \begin{tikzpicture}[node distance=7mm]
         \node[cookie node,minimum width=2.4cm] (e) {Edit};
-        \node[cookie accent node,minimum width=2.4cm,right=14mm of e] (w) {Wait 30\,h};
+        \node[cookie accent node,minimum width=2.4cm,right=14mm of e] (w) {Wait 20\,h};
         \node[cookie node,minimum width=2.4cm,below=9mm of $(e)!.5!(w)$] (l) {Learn nothing};
         \draw[cookie arrow] (e) -- (w);
         \draw[cookie arrow] (w) -- (l);
@@ -180,32 +180,12 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{The most useful result: things I believed that were wrong}
-  \begin{columns}[T,onlytextwidth]
-    \column{.48\textwidth}
-      \begin{alertblock}{I thought\dots}
-        The reference outputs were too imprecise for exact comparison.
-      \end{alertblock}
-      \begin{exampleblock}{Actually}
-        They are full precision. They reproduce only \textbf{93\%} of the time, because they came from another machine.
-      \end{exampleblock}
-    \column{.48\textwidth}
-      \begin{alertblock}{I thought\dots}
-        Changing COMMON layouts would break restart files.
-      \end{alertblock}
-      \begin{exampleblock}{Actually}
-        Almost none of it is ever written to disk.
-      \end{exampleblock}
-  \end{columns}
-  \vspace{.3em}
-  Each would have changed the plan. An agent that read the code carefully found them \textbf{in an afternoon}.
-\end{frame}
 
 \begin{frame}{A reproducibility contract}
   \begin{columns}[T,onlytextwidth]
     \column{.48\textwidth}
       \begin{cookiecard}[title={1 rank, 1 thread}]
-        Output is \textbf{byte-identical} run to run.\\[.4em]
+        Output is \textbf{byte-identical} run to run.\\[.5em]
         $\Rightarrow$ the \textbf{exact gate}.
       \end{cookiecard}
     \column{.48\textwidth}
